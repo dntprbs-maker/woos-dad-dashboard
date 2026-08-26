@@ -1,7 +1,7 @@
 node_modules/
-.env
-.env.local
-.vercel/
-
 .vercel
+
+# 실제 값이 든 환경변수 파일은 절대 올리지 않는다
 .env*
+# 단, 키 이름만 적힌 예시 파일은 공유한다
+!.env.example
