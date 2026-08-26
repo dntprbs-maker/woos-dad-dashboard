@@ -5,6 +5,10 @@
 ## 필요한 Vercel 환경변수
 - `NOTION_TOKEN`: Notion Integration Secret
 - `NOTION_DATABASE_ID`: 기본값이 코드에 포함되어 있어 선택사항
+- `DASHBOARD_PASSWORD`: 대시보드 접속 비밀번호 (**필수**)
+
+> ⚠️ `DASHBOARD_PASSWORD`가 설정돼 있지 않으면 `/api/tasks`는 데이터를 내주지 않고 503을 반환합니다.
+> 설정 누락 시 실데이터가 새어나가지 않도록 일부러 막아두는 동작입니다.
 
 Notion Integration에는 해당 DB에 대한 읽기 권한을 부여해야 합니다.
 
@@ -14,6 +18,17 @@ Notion Integration에는 해당 DB에 대한 읽기 권한을 부여해야 합�
 - 상태=`완료`면 한 일, 그 외는 할 일
 - 완료 정렬은 `완료일시 → 작업일 → 날짜 없음` 순
 - API 연결 전에는 기존 시안 데이터가 보이고, 연결 성공 시 실데이터로 교체
+
+## 접속 보호
+노션 실데이터가 나가는 `/api/tasks`는 비밀번호 없이는 열리지 않습니다.
+
+- 처음 접속하면 비밀번호 입력창이 뜹니다
+- `POST /api/login`이 비밀번호를 확인하고 인증 쿠키(`dash`)를 발급합니다
+  - 쿠키에는 비밀번호가 아니라 SHA-256 해시가 담기고, `HttpOnly` / `Secure` / `SameSite=Strict`로 설정됩니다
+  - 유효기간 30일 — 한 번 입력하면 브라우저가 기억합니다
+- `/api/tasks` 응답은 `Cache-Control: private, no-store`라 Vercel 엣지 캐시에 남지 않습니다
+
+⚠️ 보호되는 것은 **노션 실데이터**입니다. `index.html` 자체와 그 안의 시안 데이터는 공개 상태입니다.
 
 ## 배포
 - 운영 URL: https://woos-dad-dashboard.vercel.app

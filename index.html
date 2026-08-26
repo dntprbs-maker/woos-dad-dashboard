@@ -970,7 +970,9 @@ function normalizeProjectName(rawProject){
 async function loadLiveNotionData(){
   const badge = document.getElementById("liveDataStatus");
   try{
-    const res = await fetch("/api/tasks", {cache:"no-store"});
+    const res = await fetch("/api/tasks", {cache:"no-store", credentials:"same-origin"});
+    if(res.status === 401){ showPasswordGate(); return; }
+    if(res.status === 503){ showPasswordGate("서버에 DASHBOARD_PASSWORD가 아직 설정되지 않았습니다."); return; }
     if(!res.ok) throw new Error("API " + res.status);
     const payload = await res.json();
     if(!payload.ok || !Array.isArray(payload.tasks)) throw new Error("invalid payload");
@@ -1016,6 +1018,7 @@ async function loadLiveNotionData(){
       if(count) count.textContent = d.todo.length;
     });
 
+    hidePasswordGate();
     badge.textContent = "● Notion 실데이터";
     badge.style.color = "#15803d";
     badge.style.background = "rgba(240,253,244,.92)";
@@ -1041,6 +1044,85 @@ font-size:11px;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.
 box-shadow:0 3px 12px rgba(15,23,42,.12);color:#64748b;backdrop-filter:blur(6px)">
   데이터 연결 확인 중…
 </div>
+
+
+<div id="passwordGate" style="display:none;position:fixed;inset:0;z-index:200;
+background:rgba(23,32,51,.55);backdrop-filter:blur(8px);
+align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:340px;background:var(--card);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:26px 22px">
+    <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px">아빠 대시보드</div>
+    <div id="gateMsg" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:18px">
+      비밀번호를 입력하면 실데이터가 표시됩니다.
+    </div>
+    <input id="gateInput" type="password" autocomplete="current-password" placeholder="비밀번호"
+      style="width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--line);
+      border-radius:12px;outline:none;margin-bottom:10px" />
+    <div id="gateError" style="display:none;font-size:12.5px;color:#dc2626;margin-bottom:10px"></div>
+    <button id="gateSubmit"
+      style="width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:var(--primary);
+      border:none;border-radius:12px;cursor:pointer">확인</button>
+  </div>
+</div>
+
+<script>
+function showPasswordGate(msg){
+  const gate = document.getElementById("passwordGate");
+  if(msg) document.getElementById("gateMsg").textContent = msg;
+  gate.style.display = "flex";
+  const input = document.getElementById("gateInput");
+  if(input) setTimeout(()=>input.focus(), 50);
+}
+function hidePasswordGate(){
+  document.getElementById("passwordGate").style.display = "none";
+}
+
+(function(){
+  const input  = document.getElementById("gateInput");
+  const button = document.getElementById("gateSubmit");
+  const errBox = document.getElementById("gateError");
+
+  function showError(text){
+    errBox.textContent = text;
+    errBox.style.display = "block";
+  }
+
+  async function submit(){
+    const password = input.value;
+    if(!password){ showError("비밀번호를 입력해 주세요."); return; }
+
+    button.disabled = true;
+    button.textContent = "확인 중…";
+    errBox.style.display = "none";
+
+    try{
+      const res = await fetch("/api/login", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"same-origin",
+        body: JSON.stringify({password})
+      });
+      const payload = await res.json().catch(()=>({}));
+
+      if(res.ok && payload.ok){
+        input.value = "";
+        hidePasswordGate();
+        await loadLiveNotionData();
+        return;
+      }
+      showError(payload.error || ("로그인 실패 (" + res.status + ")"));
+    }catch(e){
+      showError("네트워크 오류가 발생했습니다.");
+    }finally{
+      button.disabled = false;
+      button.textContent = "확인";
+    }
+  }
+
+  button.addEventListener("click", submit);
+  input.addEventListener("keydown", e=>{ if(e.key === "Enter") submit(); });
+})();
+</script>
 
 </body>
 </html>
