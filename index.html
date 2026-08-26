@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>아빠 대시보드</title>
+<style>
+  :root{
+    --bg:#f5f7fb;
+    --card:#ffffff;
+    --text:#172033;
+    --muted:#7c879d;
+    --line:#e7ebf2;
+    --primary:#3b82f6;
+    --primary-soft:#eaf2ff;
+    --done:#16a34a;
+    --done-soft:#eaf8ef;
+    --warn:#f59e0b;
+    --shadow:0 8px 28px rgba(31,45,61,.08);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Apple SD Gothic Neo",sans-serif;
+  }
+  .app{
+    width:100%;
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    padding:18px 14px calc(30px + env(safe-area-inset-bottom));
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .title-wrap h1{
+    margin:0;
+    font-size:27px;
+    letter-spacing:-.6px;
+  }
+  .title-wrap p{
+    margin:4px 0 0;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .avatar{
+    width:42px;height:42px;border-radius:14px;
+    background:var(--primary-soft);
+    display:grid;place-items:center;
+    font-size:22px;
+  }
+  .summary{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .summary-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    box-shadow:var(--shadow);
+  }
+  .summary-card .label{
+    color:var(--muted);
+    font-size:12px;
+  }
+  .summary-card .num{
+    margin-top:5px;
+    font-weight:800;
+    font-size:24px;
+  }
+  .section-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin:20px 2px 10px;
+  }
+  .section-title h2{
+    margin:0;
+    font-size:18px;
+  }
+  .section-title span{
+    color:var(--muted);
+    font-size:12px;
+  }
+  .project{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    margin-bottom:12px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .project-head{
+    width:100%;
+    border:0;
+    background:transparent;
+    padding:16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    text-align:left;
+    color:inherit;
+  }
+  .project-icon{
+    width:42px;height:42px;border-radius:14px;
+    display:grid;place-items:center;
+    background:var(--primary-soft);
+    font-size:21px;
+    flex:0 0 auto;
+  }
+  .project-info{
+    flex:1;
+    min-width:0;
+  }
+  .project-info strong{
+    display:block;
+    font-size:16px;
+    margin-bottom:4px;
+  }
+  .project-info small{
+    color:var(--muted);
+    font-size:12px;
+  }
+  .chev{
+    font-size:18px;
+    transition:.2s transform;
+    color:var(--muted);
+  }
+  .project.open .chev{transform:rotate(180deg)}
+  .project-body{
+    display:none;
+    padding:0 14px 14px;
+  }
+  .project.open .project-body{display:block}
+  .tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin:2px 0 12px;
+    background:#f2f5fa;
+    padding:5px;
+    border-radius:13px;
+  }
+  .tab{
+    border:0;
+    background:transparent;
+    border-radius:10px;
+    padding:9px 8px;
+    font-weight:700;
+    color:var(--muted);
+  }
+  .tab.active{
+    background:var(--card);
+    color:var(--text);
+    box-shadow:0 2px 10px rgba(31,45,61,.08);
+  }
+  .task-list{display:none}
+  .task-list.active{display:block}
+  .task{
+    width:100%;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:14px;
+    padding:13px 14px;
+    margin-bottom:8px;
+    text-align:left;
+    color:inherit;
+  }
+  .task:active{transform:scale(.995)}
+  .task-title{
+    font-size:15px;
+    font-weight:700;
+    line-height:1.35;
+    margin-bottom:7px;
+  }
+  .task-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    min-height:24px;
+    padding:4px 8px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+    background:#f2f4f8;
+    color:#667085;
+  }
+  .badge.progress{background:var(--primary-soft);color:#2563eb}
+  .badge.done{background:var(--done-soft);color:var(--done)}
+  .badge.warn{background:#fff7e8;color:#b86b00}
+  .empty{
+    text-align:center;
+    padding:18px 8px;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .footer-note{
+    margin-top:18px;
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+    line-height:1.6;
+  }
+
+  .modal-wrap{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.38);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:50;
+  }
+  .modal-wrap.show{display:flex}
+  .modal{
+    width:100%;
+    max-width:480px;
+    background:#fff;
+    border-radius:24px 24px 0 0;
+    padding:10px 16px calc(22px + env(safe-area-inset-bottom));
+    box-shadow:0 -16px 40px rgba(0,0,0,.16);
+  }
+  .handle{
+    width:46px;height:5px;border-radius:10px;
+    background:#d7dce5;
+    margin:2px auto 16px;
+  }
+  .modal h3{
+    margin:0 0 12px;
+    font-size:20px;
+    line-height:1.35;
+  }
+  .detail-grid{
+    display:grid;
+    grid-template-columns:74px 1fr;
+    gap:9px 10px;
+    margin:14px 0 18px;
+    font-size:14px;
+  }
+  .detail-grid .k{color:var(--muted)}
+  .detail-grid .v{font-weight:600}
+  .desc{
+    padding:13px 14px;
+    border-radius:14px;
+    background:#f7f9fc;
+    line-height:1.65;
+    font-size:14px;
+    color:#334155;
+  }
+  .close-btn{
+    width:100%;
+    border:0;
+    border-radius:14px;
+    padding:13px;
+    margin-top:14px;
+    background:#172033;
+    color:white;
+    font-weight:800;
+    font-size:15px;
+  }
+
+  .project-menu{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .project-row{
+    width:100%;
+    border:0;
+    border-bottom:1px solid var(--line);
+    background:#fff;
+    padding:13px 14px;
+    display:flex;
+    align-items:center;
+    gap:11px;
+    text-align:left;
+    color:inherit;
+    cursor:pointer;
+  }
+  .project-row:last-child{border-bottom:0}
+  .project-row .mini-icon{
+    width:34px;height:34px;border-radius:11px;
+    display:grid;place-items:center;
+    background:var(--primary-soft);
+    font-size:17px;flex:0 0 auto;
+  }
+  .project-row .name{font-weight:750;font-size:15px;flex:1}
+  .project-row .arrow{color:var(--muted);font-size:20px}
+  .drag-handle{
+    color:#b3bccb;font-size:18px;padding:4px 2px;
+    touch-action:none;cursor:grab;
+  }
+  .project-row.dragging{opacity:.45;background:#f7f9fc}
+  .detail-page{display:none}
+  .detail-page.show{display:block}
+  .home-page.hide{display:none}
+  .detail-top{
+    display:flex;align-items:center;gap:10px;margin-bottom:16px;
+  }
+  .back-btn{
+    width:38px;height:38px;border:1px solid var(--line);
+    border-radius:12px;background:#fff;font-size:20px;color:var(--text);
+  }
+  .detail-top h2{margin:0;font-size:21px}
+  .detail-sub{color:var(--muted);font-size:12px;margin-top:2px}
+
+
+  .employee-tools{margin-top:18px}
+  .tool-card{
+    background:#fff;border:1px solid var(--line);border-radius:18px;
+    padding:15px;margin-bottom:12px;box-shadow:var(--shadow);
+  }
+  .tool-card h3{margin:0 0 5px;font-size:17px}
+  .tool-card p{margin:0 0 13px;color:var(--muted);font-size:12px;line-height:1.5}
+  .form-label{display:block;font-size:12px;font-weight:750;margin:12px 0 6px}
+  .form-select,.form-input,.form-textarea{
+    width:100%;border:1px solid var(--line);border-radius:12px;background:#f9fafc;
+    padding:12px;font:inherit;font-size:14px;color:var(--text);outline:none;
+  }
+  .form-textarea{min-height:105px;resize:vertical;line-height:1.55}
+  .form-select:focus,.form-input:focus,.form-textarea:focus{border-color:#a9c8ff;background:#fff}
+  .segmented{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .seg-btn{
+    border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 6px;
+    font-weight:750;color:var(--muted)
+  }
+  .seg-btn.active{background:var(--primary-soft);border-color:#cfe0ff;color:#2563eb}
+  .submit-btn{
+    width:100%;border:0;border-radius:13px;background:var(--primary);color:#fff;
+    padding:13px;margin-top:15px;font-size:15px;font-weight:800
+  }
+  .ai-note{
+    margin-top:10px;padding:10px 11px;border-radius:11px;background:#f3f7ff;
+    color:#52627a;font-size:11px;line-height:1.55
+  }
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+    background:#172033;color:#fff;padding:11px 16px;border-radius:999px;
+    font-size:13px;font-weight:700;display:none;z-index:80;white-space:nowrap
+  }
+  .toast.show{display:block}
+
+
+  .floating-actions{
+    position:fixed;
+    right:16px;
+    bottom:22px;
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    z-index:65;
+  }
+  .float-action-btn{
+    border:none;
+    border-radius:999px;
+    padding:11px 15px;
+    min-width:124px;
+    color:#fff;
+    font-size:14px;
+    font-weight:800;
+    box-shadow:0 8px 24px rgba(31,45,61,.20);
+    text-align:center;
+  }
+  .float-action-btn.coop{background:var(--primary)}
+  .float-action-btn.result{background:#16a34a}
+  .float-action-btn:active{transform:scale(.97)}
+  .work-popup-wrap{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.38);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:70;
+  }
+  .work-popup-wrap.show{display:flex}
+  .work-popup{
+    width:100%;
+    max-width:430px;
+    max-height:88vh;
+    overflow:auto;
+    background:#fff;
+    border-radius:22px;
+    padding:18px;
+    box-shadow:0 24px 60px rgba(15,23,42,.24);
+  }
+  .popup-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    margin-bottom:8px;
+  }
+  .popup-head h3{margin:0;font-size:20px}
+  .popup-close{
+    border:0;background:#f3f5f8;width:34px;height:34px;border-radius:10px;
+    font-size:20px;color:#677084;
+  }
+  .ai-followup{
+    display:none;
+    margin-top:14px;
+    padding:13px;
+    border-radius:14px;
+    background:#fff8e8;
+    border:1px solid #fde3a7;
+  }
+  .ai-followup.show{display:block}
+  .ai-followup strong{display:block;margin-bottom:6px;font-size:14px}
+  .ai-followup p{margin:0 0 10px;font-size:13px;line-height:1.55;color:#66501c}
+  .follow-input{
+    width:100%;border:1px solid #f2d48b;border-radius:11px;padding:11px;
+    font:inherit;font-size:14px;background:#fff;
+  }
+
+
+  /* 작업 상세 팝업: 중앙 표시 + 뒤 화면이 보이는 반투명 배경 */
+  .modal-wrap{
+    align-items:center !important;
+    justify-content:center !important;
+    padding:18px !important;
+    background:rgba(15,23,42,.20) !important;
+    backdrop-filter:blur(1.5px);
+    -webkit-backdrop-filter:blur(1.5px);
+  }
+  .modal{
+    width:100% !important;
+    max-width:430px !important;
+    max-height:82vh !important;
+    overflow:auto !important;
+    border-radius:22px !important;
+    padding:18px !important;
+    box-shadow:0 20px 55px rgba(15,23,42,.22) !important;
+  }
+  .modal .handle{display:none !important}
+
+  /* 플로팅 버튼도 뒤 콘텐츠를 조금 볼 수 있게 */
+  .float-action-btn.coop{
+    background:rgba(59,130,246,.88) !important;
+    backdrop-filter:blur(5px);
+    -webkit-backdrop-filter:blur(5px);
+  }
+  .float-action-btn.result{
+    background:rgba(22,163,74,.88) !important;
+    backdrop-filter:blur(5px);
+    -webkit-backdrop-filter:blur(5px);
+  }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="home-page" id="homePage">
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1>🏠 아빠 대시보드</h1>
+        <p>보고 싶은 프로젝트를 선택하세요</p>
+      </div>
+      <div class="avatar">👨‍💼</div>
+    </div>
+
+    <div class="section-title">
+      <h2>프로젝트</h2>
+      <span>☰ 길게 눌러 순서 변경</span>
+    </div>
+
+    <div class="project-menu" id="projectMenu">
+      <button class="project-row" draggable="true" data-name="클린멤버" data-icon="📱" data-sub="앱 출시 · 운영 준비">
+        <span class="drag-handle">☰</span><span class="mini-icon">📱</span><span class="name">클린멤버</span><span class="arrow">›</span>
+      </button>
+      <button class="project-row" draggable="true" data-name="클린매니저" data-icon="🗓️" data-sub="일정 · 팀 배정 관리">
+        <span class="drag-handle">☰</span><span class="mini-icon">🗓️</span><span class="name">클린매니저</span><span class="arrow">›</span>
+      </button>
+      <button class="project-row" draggable="true" data-name="크리너리" data-icon="🤖" data-sub="상담 · 자동화 운영">
+        <span class="drag-handle">☰</span><span class="mini-icon">🤖</span><span class="name">크리너리</span><span class="arrow">›</span>
+      </button>
+      <button class="project-row" draggable="true" data-name="KBO" data-icon="⚾" data-sub="예측 · 자동배포">
+        <span class="drag-handle">☰</span><span class="mini-icon">⚾</span><span class="name">KBO</span><span class="arrow">›</span>
+      </button>
+      <button class="project-row" draggable="true" data-name="마스터 프로젝트" data-icon="🧩" data-sub="전체 프로젝트 관리">
+        <span class="drag-handle">☰</span><span class="mini-icon">🧩</span><span class="name">마스터 프로젝트</span><span class="arrow">›</span>
+      </button>
+      <button class="project-row" draggable="true" data-name="다인이벤트" data-icon="🎪" data-sub="이벤트 프로젝트">
+        <span class="drag-handle">☰</span><span class="mini-icon">🎪</span><span class="name">다인이벤트</span><span class="arrow">›</span>
+      </button>
+      <button class="project-row" draggable="true" data-name="AI 업무 시스템" data-icon="🧠" data-sub="AI 협업 · 기억 허브">
+        <span class="drag-handle">☰</span><span class="mini-icon">🧠</span><span class="name">AI 업무 시스템</span><span class="arrow">›</span>
+      </button>
+      <button class="project-row" draggable="true" data-name="기타" data-icon="📁" data-sub="기타 업무">
+        <span class="drag-handle">☰</span><span class="mini-icon">📁</span><span class="name">기타</span><span class="arrow">›</span>
+      </button>
+    </div>
+
+    <div class="footer-note">
+      프로젝트 순서는 이 기기에 저장됩니다.<br/>
+      Notion 실데이터를 불러와 프로젝트별로 표시합니다.
+    </div>
+  </div>
+
+  <div class="detail-page" id="detailPage">
+    <div class="detail-top">
+      <button class="back-btn" onclick="goHome()">‹</button>
+      <div>
+        <h2 id="detailProjectName">프로젝트</h2>
+        <div class="detail-sub" id="detailProjectSub"></div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="detailTab(this,'todo')">할 일</button>
+      <button class="tab" onclick="detailTab(this,'done')">한 일</button>
+    </div>
+
+    <div class="task-list active" id="detailTodo" data-tab="todo"></div>
+    <div class="task-list" id="detailDone" data-tab="done"></div>
+
+    
+<div class="toast" id="toast">입력 내용을 확인했습니다 · 현재는 시안입니다</div>
+
+
+<div class="floating-actions">
+  <button class="float-action-btn coop" onclick="openWorkPopup('업무협조')">🤝 업무협조</button>
+  <button class="float-action-btn result" onclick="openWorkPopup('처리결과')">✅ 결과입력</button>
+</div>
+
+<div class="work-popup-wrap" id="workPopupWrap" onclick="workBackdropClose(event)">
+  <div class="work-popup">
+    <div class="popup-head">
+      <div>
+        <h3>🤝 업무협조 · 처리결과</h3>
+        <div class="detail-sub">평소 말하듯 적으면 AI가 DB 형식으로 정리합니다.</div>
+      </div>
+      <button class="popup-close" onclick="closeWorkPopup()">×</button>
+    </div>
+
+    <div class="ai-note" id="selectedTypeNote" style="margin:12px 0 4px">입력 유형: <strong id="selectedTypeText">업무협조</strong></div>
+    <input type="hidden" id="selectedType" value="업무협조">
+
+    <label class="form-label" id="workerLabel">누구에게 요청하나요?</label>
+    <input class="form-input" id="workerInput" placeholder="예: 사장님, 우용준, 초롱이" />
+
+    <label class="form-label">내용</label>
+    <textarea class="form-textarea" id="workText" placeholder="예: 사장님께 블로그 사진 정리 확인 부탁드립니다."></textarea>
+
+    <button class="submit-btn" type="button" onclick="submitEmployeeForm()">AI에게 정리해서 등록 요청</button>
+
+    <div class="ai-followup" id="aiFollowup">
+      <strong>🤔 내용이 조금 애매해요</strong>
+      <p id="followupQuestion">업무로 등록하려면 무엇을 해달라는 건지 조금만 더 알려주세요.</p>
+      <input class="follow-input" id="followupInput" placeholder="예: 점심 주문을 대신 해달라는 요청이에요" />
+      <button class="submit-btn" style="margin-top:10px" type="button" onclick="resolveFollowup()">추가 설명 보내기</button>
+    </div>
+
+    <div class="ai-note">
+      ✨ 실제 연결 시 AI가 프로젝트·작성자·의뢰자·수행자·상태·작업유형을 판단하고, 애매한 내용은 바로 저장하지 않고 다시 질문합니다.
+    </div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="modalWrap" onclick="backdropClose(event)">
+  <div class="modal">
+    <div class="handle"></div>
+    <h3 id="mTitle">작업 제목</h3>
+    <div class="detail-grid">
+      <div class="k">프로젝트</div><div class="v" id="mProject"></div>
+      <div class="k">상태</div><div class="v" id="mStatus"></div>
+      <div class="k">중요도</div><div class="v" id="mPriority"></div>
+      <div class="k">담당</div><div class="v" id="mWorker"></div>
+    </div>
+    <div class="desc" id="mDesc"></div>
+    <button class="close-btn" onclick="closeTask()">닫기</button>
+  </div>
+</div>
+
+<script>
+const projectTasks = {
+  "클린멤버":{
+    todo:[
+      ["앱스토어 검색명 확인","대기","중","김용재","iOS 앱스토어에서 실제 노출되는 앱 이름을 확인하고 검색 가능 여부를 점검한다."],
+      ["몽골어 안내문 점검","진행중","중","초롱이","몽골인 작업자가 이해하기 쉬운 표현인지 앱 내 안내문을 확인한다."]
+    ],
+    done:[
+      ["Android 플레이스토어 설치 확인","완료","중","아빠","Android 기기에서 플레이스토어 설치 및 실행 확인 완료."]
+    ]
+  },
+  "클린매니저":{
+    todo:[["입력창 버튼 시인성 개선","대기","상","Claude Code","모바일에서 입력 버튼이 잘 보이지 않는 문제를 수정한다."]],
+    done:[["Attendance 모바일 420px 레이아웃","완료","중","Claude Code","작업자 화면을 모바일 420px 프레임 기준으로 정리 완료."]]
+  },
+  "크리너리":{
+    todo:[["상담봇 자동화 구조 정리","대기","상","초롱이","정체된 상담봇 세팅을 다시 구조화하고 자동화 흐름을 정리한다."]],
+    done:[]
+  },
+  "KBO":{
+    todo:[["팀 bias 오류 확인","대기","상","Codex","자동토토 팀 bias 오류 원인을 확인하고 수정 방향을 정리한다."]],
+    done:[["Vercel 배포 권한 점검","완료","중","초롱이","Vercel 프로젝트 접근 및 배포 상태 확인을 위한 권한 점검 완료."]]
+  }
+};
+
+let currentProject = "";
+
+
+const menu = document.getElementById("projectMenu");
+let dragged = null;
+
+function saveOrder(){
+  localStorage.setItem(
+    "dadProjectOrder",
+    JSON.stringify([...menu.querySelectorAll(".project-row")].map(x=>x.dataset.name))
+  );
+}
+
+
+function taskHtml(project, item, done){
+  let title, status, priority, worker, desc;
+  if(Array.isArray(item)){
+    [title,status,priority,worker,desc] = item;
+  }else{
+    title = item?.title || "(제목 없음)";
+    status = item?.status || (done ? "완료" : "대기");
+    priority = item?.priority || "";
+    worker = item?.worker || "";
+    desc = item?.desc || item?.description || "";
+  }
+  title = String(title || "(제목 없음)").replace(/^\s*\[[^\]]+\]\s*/i, "");
+  const statusClass = done ? "done" : (status === "진행중" ? "progress" : "");
+  const priorityBadge = (!done && priority) ? `<span class="badge warn">중요도 ${priority}</span>` : "";
+  return `<button class="task" onclick='openTask(${JSON.stringify(title)},${JSON.stringify(project)},${JSON.stringify(status)},${JSON.stringify(priority)},${JSON.stringify(worker)},${JSON.stringify(desc)})'>
+    <div class="task-title">${title}</div>
+    <div class="task-meta"><span class="badge ${statusClass}">${status}</span>${priorityBadge}</div>
+  </button>`;
+}
+
+function renderProject(row){
+  if(!row) return;
+  currentProject = row.dataset.name;
+  document.getElementById("detailProjectName").textContent = row.dataset.icon + " " + currentProject;
+  document.getElementById("detailProjectSub").textContent = row.dataset.sub || "";
+  const data = projectTasks[currentProject] || {todo:[],done:[]};
+  document.getElementById("detailTodo").innerHTML = data.todo.length ? data.todo.map(x=>taskHtml(currentProject,x,false)).join("") : '<div class="empty">현재 할 일이 없습니다.</div>';
+  document.getElementById("detailDone").innerHTML = data.done.length ? data.done.map(x=>taskHtml(currentProject,x,true)).join("") : '<div class="empty">완료된 작업이 없습니다.</div>';
+  document.querySelectorAll("#detailPage .tab").forEach((x,i)=>x.classList.toggle("active",i===0));
+  document.getElementById("detailTodo").classList.add("active");
+  document.getElementById("detailDone").classList.remove("active");
+  document.getElementById("homePage").classList.add("hide");
+  document.getElementById("detailPage").classList.add("show");
+  window.scrollTo(0,0);
+}
+
+function openProject(row, addHistory=true){
+  if(!row) return;
+  renderProject(row);
+  const name = row.dataset.name;
+  sessionStorage.setItem("dadCurrentProject", name);
+
+  if(addHistory){
+    const newHash = "#project=" + encodeURIComponent(name);
+    if(location.hash !== newHash){
+      location.hash = newHash;
+    }
+  }
+}
+
+function showHome(clearHash=false){
+  currentProject = "";
+  sessionStorage.removeItem("dadCurrentProject");
+  document.getElementById("detailPage").classList.remove("show");
+  document.getElementById("homePage").classList.remove("hide");
+  window.scrollTo(0,0);
+
+  if(clearHash && location.hash){
+    history.back();
+  }
+}
+
+function goHome(){
+  if(location.hash.startsWith("#project=")){
+    history.back();
+  }else{
+    showHome(false);
+  }
+}
+function detailTab(btn, tab){
+  document.querySelectorAll("#detailPage .tab").forEach(x=>x.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("detailTodo").classList.toggle("active",tab==="todo");
+  document.getElementById("detailDone").classList.toggle("active",tab==="done");
+}
+let currentTaskPayload = null;
+
+function buildProjectHash(extra=""){
+  const base = currentProject ? "#project=" + encodeURIComponent(currentProject) : "#home";
+  return extra ? base + "&" + extra : base;
+}
+
+function openTask(title, project, status, priority, worker, desc, addHistory=true){
+  currentTaskPayload = {title, project, status, priority, worker, desc};
+  document.getElementById('mTitle').textContent = title;
+  document.getElementById('mProject').textContent = project;
+  document.getElementById('mStatus').textContent = status;
+  document.getElementById('mPriority').textContent = priority;
+  document.getElementById('mWorker').textContent = worker;
+  document.getElementById('mDesc').textContent = desc;
+  document.getElementById('modalWrap').classList.add('show');
+
+  if(addHistory){
+    const targetHash = buildProjectHash("task=1");
+    if(location.hash !== targetHash) location.hash = targetHash;
+  }
+}
+
+function closeTask(fromHistory=false){
+  document.getElementById('modalWrap').classList.remove('show');
+  if(!fromHistory && location.hash.includes("&task=1")){
+    history.back();
+  }
+}
+function loadOrder(){
+  try{
+    const order = JSON.parse(localStorage.getItem("dadProjectOrder") || "[]");
+    order.forEach(name=>{
+      const el=[...menu.querySelectorAll(".project-row")].find(x=>x.dataset.name===name);
+      if(el) menu.appendChild(el);
+    });
+  }catch(e){}
+}
+menu.querySelectorAll(".project-row").forEach(row=>{
+  row.addEventListener("click",()=>{ if(Date.now() < suppressClickUntil) return; openProject(row,true); });
+  row.addEventListener("dragstart",e=>{dragged=row;row.classList.add("dragging");});
+  row.addEventListener("dragend",e=>{row.classList.remove("dragging");dragged=null;saveOrder();});
+  row.addEventListener("dragover",e=>{
+    e.preventDefault();
+    if(!dragged || dragged===row) return;
+    const rect=row.getBoundingClientRect();
+    if(e.clientY < rect.top+rect.height/2) menu.insertBefore(dragged,row);
+    else menu.insertBefore(dragged,row.nextSibling);
+  });
+});
+
+// Touch long-press reorder for phones
+let touchRow=null, touchClone=null, longTimer=null, touchActive=false;
+let suppressClickUntil=0;
+menu.querySelectorAll(".project-row").forEach(row=>{
+  row.addEventListener("touchstart",e=>{
+    touchRow=row; touchActive=false;
+    longTimer=setTimeout(()=>{
+      touchActive=true;
+      row.classList.add("dragging");
+      if(navigator.vibrate) navigator.vibrate(30);
+    },450);
+  },{passive:true});
+  row.addEventListener("touchmove",e=>{
+    if(!touchActive || !touchRow) return;
+    e.preventDefault();
+    const y=e.touches[0].clientY;
+    const target=document.elementFromPoint(e.touches[0].clientX,y)?.closest(".project-row");
+    if(target && target!==touchRow){
+      const rect=target.getBoundingClientRect();
+      if(y < rect.top+rect.height/2) menu.insertBefore(touchRow,target);
+      else menu.insertBefore(touchRow,target.nextSibling);
+    }
+  },{passive:false});
+  row.addEventListener("touchend",e=>{
+    clearTimeout(longTimer);
+    if(touchActive){
+      e.preventDefault();
+      row.classList.remove("dragging");
+      saveOrder();
+      suppressClickUntil=Date.now()+500;
+    }
+    touchActive=false;touchRow=null;
+  });
+});
+
+
+
+
+function openWorkPopup(type, addHistory=true){
+  document.getElementById("selectedType").value=type;
+  document.getElementById("selectedTypeText").textContent=type==="처리결과" ? "결과입력" : "업무협조";
+  document.getElementById("workerLabel").textContent=type==="처리결과" ? "누가 처리했나요?" : "누구에게 요청하나요?";
+  document.getElementById("workerInput").placeholder=type==="처리결과" ? "예: 우용준, Claude Code" : "예: 사장님, 우용준, 초롱이";
+  document.getElementById("workText").placeholder=type==="처리결과"
+    ? "예: 블로그 글 2개 작성 완료했고 사진 정리까지 끝냈습니다."
+    : "예: 사장님께 블로그 사진 확인 부탁드립니다.";
+  document.getElementById("aiFollowup").classList.remove("show");
+  document.getElementById("workPopupWrap").classList.add("show");
+
+  if(addHistory){
+    const kind = type==="처리결과" ? "result" : "coop";
+    const base = currentProject ? "#project=" + encodeURIComponent(currentProject) : "#home";
+    const targetHash = base + "&work=" + kind;
+    if(location.hash !== targetHash) location.hash = targetHash;
+  }
+}
+
+function closeWorkPopup(fromHistory=false){
+  document.getElementById("workPopupWrap").classList.remove("show");
+  document.getElementById("aiFollowup").classList.remove("show");
+  if(!fromHistory && location.hash.includes("&work=")){
+    history.back();
+  }
+}
+function workBackdropClose(e){
+  if(e.target.id==="workPopupWrap") closeWorkPopup(false);
+}
+
+function submitEmployeeForm(){
+  const who=(document.getElementById("workerInput").value||"").trim();
+  const text=(document.getElementById("workText").value||"").trim();
+  const type=document.getElementById("selectedType").value || "업무협조";
+
+  if(!text){
+    const t=document.getElementById("toast");
+    t.textContent="내용을 먼저 입력해 주세요";
+    t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"),1800);
+    return;
+  }
+
+  // Demo ambiguity check for very short/vague natural-language inputs.
+  const vagueWords=["그냥","배고파","몰라","아무거나","그냥이요"];
+  const looksVague = text.length < 18 || vagueWords.some(w=>text.includes(w));
+
+  if(looksVague){
+    const box=document.getElementById("aiFollowup");
+    const q=document.getElementById("followupQuestion");
+    if(type==="업무협조"){
+      q.textContent = `${who || "상대방"}에게 무엇을 해달라는 요청인지 조금만 더 알려주세요. 예: “점심 주문 부탁”, “블로그 사진 확인 부탁”`;
+    }else{
+      q.textContent = `무슨 일을 처리한 결과인지 조금만 더 알려주세요. 예: “블로그 글 2개 작성 완료”`;
+    }
+    box.classList.add("show");
+    box.scrollIntoView({behavior:"smooth",block:"nearest"});
+    return;
+  }
+
+  document.getElementById("aiFollowup").classList.remove("show");
+  const t=document.getElementById("toast");
+  t.textContent="AI가 정리했습니다 · 현재는 시안입니다";
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2200);
+}
+function resolveFollowup(){
+  const extra=(document.getElementById("followupInput").value||"").trim();
+  if(!extra) return;
+  document.getElementById("aiFollowup").classList.remove("show");
+  const t=document.getElementById("toast");
+  t.textContent="추가 설명까지 반영했습니다 · 현재는 시안입니다";
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+loadOrder();
+
+function findProjectRow(name){
+  return [...document.querySelectorAll("#projectMenu .project-row")]
+    .find(row => row.dataset.name === name);
+}
+
+function parseHashState(){
+  const raw = location.hash.startsWith("#") ? location.hash.substring(1) : "";
+  const parts = raw.split("&").filter(Boolean);
+  const state = {project:"", task:false, work:""};
+  for(const part of parts){
+    const [k,v=""] = part.split("=");
+    if(k==="project"){
+      try{ state.project = decodeURIComponent(v); }catch(e){ state.project = ""; }
+    }else if(k==="task"){
+      state.task = v==="1";
+    }else if(k==="work"){
+      state.work = v;
+    }
+  }
+  return state;
+}
+
+function applyHashScreen(){
+  const state = parseHashState();
+
+  // Base screen first
+  if(state.project){
+    const row = findProjectRow(state.project);
+    if(row){
+      renderProject(row);
+      sessionStorage.setItem("dadCurrentProject", state.project);
+    }else{
+      showHome(false);
+    }
+  }else{
+    showHome(false);
+  }
+
+  // Close overlays first; then reopen only what hash says should be open.
+  document.getElementById('modalWrap').classList.remove('show');
+  document.getElementById("workPopupWrap").classList.remove("show");
+  document.getElementById("aiFollowup").classList.remove("show");
+
+  if(state.task && currentTaskPayload){
+    openTask(
+      currentTaskPayload.title,
+      currentTaskPayload.project,
+      currentTaskPayload.status,
+      currentTaskPayload.priority,
+      currentTaskPayload.worker,
+      currentTaskPayload.desc,
+      false
+    );
+  }else if(state.work){
+    openWorkPopup(state.work==="result" ? "처리결과" : "업무협조", false);
+  }
+}
+
+window.addEventListener("hashchange", applyHashScreen);
+
+function restoreScreenAfterRefresh(){
+  const state = parseHashState();
+  if(state.project){
+    const row = findProjectRow(state.project);
+    if(row){
+      renderProject(row);
+      sessionStorage.setItem("dadCurrentProject", state.project);
+
+      // After a hard refresh, task detail payload is not available.
+      // Normalize task hash back to the project, but work popup can be restored safely.
+      if(state.task){
+        location.replace("#project=" + encodeURIComponent(state.project));
+        return;
+      }
+      if(state.work){
+        openWorkPopup(state.work==="result" ? "처리결과" : "업무협조", false);
+      }
+      return;
+    }
+  }
+  showHome(false);
+}
+
+restoreScreenAfterRefresh();
+
+function normalizeProjectName(rawProject){
+  const raw = String(rawProject || "").trim();
+  if(!raw) return "기타";
+  const key = raw.toLowerCase().replace(/\s+/g,"").replace(/_/g,"-");
+  const exactMap = {
+    "clean-member":"클린멤버","cleanmember":"클린멤버","클린멤버":"클린멤버",
+    "clean-manager":"클린매니저","cleanmanager":"클린매니저","클린매니저":"클린매니저",
+    "cleanery":"크리너리","크리너리":"크리너리",
+    "kbo":"KBO","kbo-toto":"KBO","kbo-toto-auto":"KBO",
+    "master-project":"마스터 프로젝트","masterproject":"마스터 프로젝트","마스터프로젝트":"마스터 프로젝트",
+    "dain-event":"다인이벤트","dainevent":"다인이벤트","dine-event":"다인이벤트","dineevent":"다인이벤트","다인이벤트":"다인이벤트",
+    "ai업무시스템":"AI 업무 시스템","ai-work-system":"AI 업무 시스템","aiworksystem":"AI 업무 시스템",
+    "기타":"기타"
+  };
+  return exactMap[key] || "기타";
+}
+
+async function loadLiveNotionData(){
+  const badge = document.getElementById("liveDataStatus");
+  try{
+    const res = await fetch("/api/tasks", {cache:"no-store"});
+    if(!res.ok) throw new Error("API " + res.status);
+    const payload = await res.json();
+    if(!payload.ok || !Array.isArray(payload.tasks)) throw new Error("invalid payload");
+
+    const grouped = {};
+    for(const t of payload.tasks){
+      const p = normalizeProjectName(t.project);
+      if(!grouped[p]) grouped[p] = {todo:[], done:[]};
+
+      const item = {
+        title: t.title || "(제목 없음)",
+        status: t.status || "",
+        priority: t.priority || "",
+        worker: t.worker || "",
+        desc: t.description || "",
+        completedAt: t.completedAt || "",
+        workDate: t.workDate || "",
+        needsCheck: !!t.needsCheck
+      };
+
+      if(t.status === "완료") grouped[p].done.push(item);
+      else grouped[p].todo.push(item);
+    }
+
+    // 완료 항목은 완료일시 → 작업일 → 날짜없음 순으로 최신순
+    for(const p of Object.keys(grouped)){
+      grouped[p].done.sort((a,b)=>{
+        const da = Date.parse(a.completedAt || a.workDate || "") || 0;
+        const db = Date.parse(b.completedAt || b.workDate || "") || 0;
+        return db-da;
+      });
+    }
+
+    // Existing UI expects projectTasks. Replace mock data with live data.
+    for(const key of Object.keys(projectTasks)) delete projectTasks[key];
+    Object.assign(projectTasks, grouped);
+
+    // Rebuild counts on project rows where names match.
+    document.querySelectorAll("#projectMenu .project-row").forEach(row=>{
+      const name = row.dataset.name;
+      const d = grouped[name] || {todo:[],done:[]};
+      const count = row.querySelector(".count");
+      if(count) count.textContent = d.todo.length;
+    });
+
+    badge.textContent = "● Notion 실데이터";
+    badge.style.color = "#15803d";
+    badge.style.background = "rgba(240,253,244,.92)";
+
+    // If currently viewing a project, repaint it with live data.
+    if(currentProject){
+      const row = findProjectRow(currentProject);
+      if(row) renderProject(row);
+    }
+  }catch(err){
+    badge.textContent = "시안 데이터 · Notion 연결 대기";
+    badge.style.color = "#b45309";
+    badge.style.background = "rgba(255,251,235,.94)";
+    console.warn("Notion live data unavailable:", err);
+  }
+}
+window.addEventListener("DOMContentLoaded", loadLiveNotionData);
+
+</script>
+
+<div id="liveDataStatus" style="position:fixed;left:12px;bottom:12px;z-index:60;
+font-size:11px;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.88);
+box-shadow:0 3px 12px rgba(15,23,42,.12);color:#64748b;backdrop-filter:blur(6px)">
+  데이터 연결 확인 중…
+</div>
+
+</body>
+</html>
