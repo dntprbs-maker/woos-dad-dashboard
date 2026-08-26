@@ -14,3 +14,7 @@ Notion Integration에는 해당 DB에 대한 읽기 권한을 부여해야 합�
 - 상태=`완료`면 한 일, 그 외는 할 일
 - 완료 정렬은 `완료일시 → 작업일 → 날짜 없음` 순
 - API 연결 전에는 기존 시안 데이터가 보이고, 연결 성공 시 실데이터로 교체
+
+## 배포
+- 운영 URL: https://woos-dad-dashboard.vercel.app
+- GitHub `main` 브랜치에 push하면 Vercel이 자동 재배포합니다 (Git 연동, 2026-08-27 설정).
