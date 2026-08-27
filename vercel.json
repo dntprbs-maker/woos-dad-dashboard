@@ -2,16 +2,17 @@
   "functions": {
     "api/tasks.js": {
       "maxDuration": 10
+    },
+    "api/v1/[...path].js": {
+      "maxDuration": 30
     }
   },
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
       ]
     }
   ]
