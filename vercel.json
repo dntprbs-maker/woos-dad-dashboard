@@ -4,10 +4,10 @@
       "maxDuration": 10
     },
     "api/v1/router.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/mcp-server.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
   "rewrites": [
