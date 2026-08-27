@@ -78,6 +78,14 @@ async function call(path, { method = "GET", body, version = LEGACY_VERSION, retr
   }
 }
 
+/**
+ * 페이지·블록처럼 데이터소스와 무관한 엔드포인트를 부를 때 쓰는 얇은 통로.
+ * (작업 DB용 헬퍼들과 달리 경로를 그대로 받는다. 운영규칙 페이지 읽기/쓰기에 쓴다)
+ */
+export function notionCall(path, opts = {}) {
+  return call(path, opts);
+}
+
 // 환경변수의 ID가 database인지 data source인지 판별하고 스키마를 캐시한다.
 export async function getSource({ force = false } = {}) {
   const id = sourceIdFromEnv();

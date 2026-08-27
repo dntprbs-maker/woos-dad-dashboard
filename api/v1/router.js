@@ -21,6 +21,7 @@ import {
   ApiError, UUID_RE,
   getSchemaInfo, listTasks, searchTasks, createTask, getTask, updateTask, archiveTask
 } from "../_lib/ops.js";
+import { getRules, updateRules } from "../_lib/rules.js";
 import { openapi } from "../_lib/openapi.js";
 
 // 알려진 한계: 노션 쿼리 인덱스는 즉시 일관되지 않는다. 실측하면 방금 만든 페이지가
@@ -84,6 +85,20 @@ export default async function handler(req, res) {
     if (segments[0] === "schema" && req.method === "GET") {
       send(res, 200, await getSchemaInfo(), rid);
       return done(200);
+    }
+
+    // 노션 운영규칙 — MCP의 get_notion_rules / update_notion_rules 와 같은 코드
+    if (segments[0] === "rules" && segments.length === 1) {
+      if (req.method === "GET") {
+        send(res, 200, await getRules(), rid);
+        return done(200);
+      }
+      if (req.method === "PATCH") {
+        send(res, 200, await updateRules(await readJson(req)), rid);
+        return done(200);
+      }
+      fail(res, 405, "method_not_allowed", "GET 또는 PATCH만 됩니다", rid);
+      return done(405);
     }
 
     if (segments[0] === "tasks") {

@@ -15,6 +15,7 @@ import { NotionError } from "./_lib/notion.js";
 import {
   ApiError, getSchemaInfo, listTasks, searchTasks, createTask, getTask, updateTask, archiveTask
 } from "./_lib/ops.js";
+import { getRules, updateRules } from "./_lib/rules.js";
 
 const SERVER_INFO = { name: "woos-tasks", title: "공용 작업관리", version: "1.1.0" };
 const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
@@ -23,6 +24,13 @@ const LATEST_PROTOCOL = SUPPORTED_PROTOCOLS[0];
 // 초롱이를 비롯한 클라이언트가 연결 직후 읽는 운영 규칙.
 const INSTRUCTIONS = [
   "Notion `작업·업무협업` DB를 여러 AI가 함께 쓰는 공용 작업 원장이다.",
+  "",
+  "**작업관리 관련 작업을 시작하기 전에 get_notion_rules 를 호출해 최신 `노션 운영규칙`을 확인한다.**",
+  "규칙의 원본은 그 노션 페이지 하나뿐이다. 네 프롬프트에 적힌 내용보다 그쪽이 우선한다.",
+  "",
+  "**update_notion_rules 는 아빠가 명시적으로 규칙 변경을 지시했을 때만 쓴다.**",
+  "ChatGPT·Claude·Claude Code 어느 쪽도 스스로의 판단으로 운영규칙을 바꾸면 안 된다.",
+  "규칙이 잘못됐다고 생각되면 고치지 말고 아빠에게 알리고 지시를 기다린다.",
   "",
   "지켜야 할 순서:",
   "1. 새 작업을 만들기 전에 반드시 search_tasks 로 기존 작업을 먼저 확인한다.",
@@ -189,6 +197,46 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true, openWorldHint: true }
   },
+  // ── 노션 운영규칙 (Single Source of Truth) ──────────────────────────────
+  {
+    name: "get_notion_rules",
+    title: "노션 운영규칙 조회",
+    description:
+      "Notion `노션 운영규칙` 페이지의 최신 내용을 읽는다. " +
+      "작업관리 관련 작업(조회·검색·생성·수정·마감)을 시작하기 전에 반드시 먼저 호출할 것. " +
+      "규칙의 원본은 이 페이지 하나이며, 프롬프트에 적힌 오래된 사본보다 항상 우선한다.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "update_notion_rules",
+    title: "노션 운영규칙 변경",
+    description:
+      "`노션 운영규칙` 내용을 추가·수정·삭제한다. 변경 후 다시 읽어 실제 반영 여부를 검증해 돌려준다. " +
+      "⚠️ 아빠가 명시적으로 운영규칙 변경을 지시했을 때만 사용한다. " +
+      "AI(ChatGPT·Claude·Claude Code 등)가 스스로의 판단만으로 운영규칙을 바꾸면 안 된다. " +
+      "규칙이 잘못돼 보이면 직접 고치지 말고 아빠에게 알리고 지시를 기다릴 것. " +
+      "mode=replace 는 기존 내용을 전부 지우고 새로 쓰므로 특히 조심한다.",
+    inputSchema: {
+      type: "object",
+      required: ["content", "dadApproved", "reason"],
+      properties: {
+        content: { type: "string", description: "규칙 본문. 줄 단위 마크다운(#, ##, -, 1.)을 인식한다" },
+        mode: {
+          type: "string",
+          enum: ["replace", "append"],
+          description: "replace=전체 교체(수정·삭제) / append=뒤에 덧붙이기(추가). 기본 replace"
+        },
+        dadApproved: {
+          type: "boolean",
+          description: "아빠가 명시적으로 규칙 변경을 지시한 경우에만 true. 네 판단으로 true를 넣지 마라"
+        },
+        reason: { type: "string", description: "아빠가 무엇을 지시했는지 (변경 이력용, 5자 이상)" },
+        passphrase: { type: "string", description: "워크스페이스가 암구호를 요구하는 경우 아빠께 받아서 전달" }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+  },
   // ── ChatGPT 딥리서치 커넥터가 기대하는 이름 (search / fetch) ────────────
   {
     name: "search",
@@ -255,6 +303,16 @@ async function runTool(name, args = {}) {
       return archiveTask(args.id);
     }
     case "get_schema": return getSchemaInfo();
+
+    case "get_notion_rules": return getRules();
+    case "update_notion_rules":
+      return updateRules({
+        mode: args.mode,
+        content: args.content,
+        dadApproved: args.dadApproved,
+        reason: args.reason,
+        passphrase: args.passphrase
+      });
 
     case "search": {
       const query = String(args.query || "").trim();
