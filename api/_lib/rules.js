@@ -149,10 +149,17 @@ function checkPermission({ dadApproved, reason, passphrase }) {
   }
 }
 
+// 블록을 하나씩 지우면 23개만 돼도 Vercel 30초 제한을 넘긴다(실측 504).
+// 노션 rate limit(평균 초당 3요청)을 감안해 조금씩 나눠 동시에 지운다. 429는 클라이언트가 재시도한다.
+const DELETE_CONCURRENCY = 5;
+
 async function deleteAllBlocks(pageId) {
   const blocks = await listAllBlocks(pageId);
-  for (const b of blocks) {
-    await notionCall(`/blocks/${b.id}`, { method: "DELETE" });
+  for (let i = 0; i < blocks.length; i += DELETE_CONCURRENCY) {
+    await Promise.all(
+      blocks.slice(i, i + DELETE_CONCURRENCY)
+        .map(b => notionCall(`/blocks/${b.id}`, { method: "DELETE" }))
+    );
   }
   return blocks.length;
 }
@@ -187,9 +194,21 @@ export async function updateRules({ mode = "replace", content, dadApproved, reas
     throw new NotionError(400, "invalid_request", "content에서 만들 수 있는 블록이 없습니다.");
   }
 
-  let deleted = 0;
-  if (mode === "replace") deleted = await deleteAllBlocks(pageId);
+  // 순서가 중요하다. 지우고 나서 넣다가 중간에 끊기면 페이지가 비어 버린다(실측으로 한 번 겪음).
+  // 넣고 나서 지우면 최악의 경우 옛 내용과 새 내용이 함께 남을 뿐이라 눈에 보이고 복구도 쉽다.
+  const oldBlocks = mode === "replace" ? await listAllBlocks(pageId) : [];
   await appendBlocksChunked(pageId, blocks);
+
+  let deleted = 0;
+  if (oldBlocks.length) {
+    for (let i = 0; i < oldBlocks.length; i += DELETE_CONCURRENCY) {
+      await Promise.all(
+        oldBlocks.slice(i, i + DELETE_CONCURRENCY)
+          .map(b => notionCall(`/blocks/${b.id}`, { method: "DELETE" }))
+      );
+    }
+    deleted = oldBlocks.length;
+  }
 
   // 검증: 실제로 반영됐는지 다시 읽는다
   const after = await getRules();
