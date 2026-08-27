@@ -2,8 +2,11 @@
 
 현재 UI 시안에 Notion `작업·업무협업` DB 읽기 API를 연결한 Vercel 프로젝트입니다.
 
-여기에 더해, 여러 AI가 같은 작업 원장을 공유하기 위한 **공용 작업관리 API**(`/api/v1`)가
+여기에 더해, 여러 AI가 같은 작업 원장을 공유하기 위한 **공용 작업관리 API**가
 같은 프로젝트 안에 함께 배포됩니다 → [docs/작업관리-API.md](docs/작업관리-API.md)
+
+- `/api/v1` — REST (HTTP+JSON)
+- `/api/mcp` — Remote MCP 서버 (Streamable HTTP). 같은 로직을 도구로 노출합니다
 
 ## 필요한 Vercel 환경변수
 - `NOTION_TOKEN`: Notion Integration Secret

@@ -5,12 +5,23 @@
     },
     "api/v1/router.js": {
       "maxDuration": 30
+    },
+    "api/mcp-server.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
     {
       "source": "/api/v1/:path*",
       "destination": "/api/v1/router?path=:path*"
+    },
+    {
+      "source": "/api/mcp",
+      "destination": "/api/mcp-server"
+    },
+    {
+      "source": "/api/mcp/:path*",
+      "destination": "/api/mcp-server?mcpkey=:path*"
     }
   ],
   "headers": [
