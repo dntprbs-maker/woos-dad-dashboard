@@ -1,12 +1,12 @@
 // 로컬에서 /api/v1 함수를 그대로 띄우는 개발용 서버.
 // Vercel 런타임이 넣어 주는 res.status()/res.json() 만 얇게 흉내 낸다.
 //
-//   node --env-file=.env.local scripts/dev-server.mjs
+//   node --env-file=.env scripts/dev-server.mjs
 //
 // 배포에는 쓰이지 않는다 (api/ 밖에 있으므로 Vercel 함수로 잡히지 않음).
 
 import { createServer } from "node:http";
-import handler from "../api/v1/[...path].js";
+import handler from "../api/v1/router.js";
 
 const PORT = Number(process.env.PORT || 3210);
 

@@ -39,13 +39,18 @@ const UUID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{1
 
 /* ------------------------------------------------------------------ 유틸 */
 
+// Vercel은 `api/v1/[...path].js` 캐치올로 두 단계 경로(/api/v1/tasks/search)를 받지 못했다.
+// 그래서 vercel.json 의 rewrite 가 원래 경로를 ?path=tasks/search 로 넘겨준다.
+// 로컬 dev-server 에는 rewrite 가 없으므로 pathname 에서 직접 잘라낸다.
 function parseUrl(req) {
   const url = new URL(req.url, "http://localhost");
-  const segments = url.pathname
-    .replace(/^\/api\/v1\/?/, "")
-    .split("/")
-    .filter(Boolean)
-    .map(decodeURIComponent);
+  const viaRewrite = url.searchParams.get("path");
+  const raw = viaRewrite !== null
+    ? viaRewrite
+    : url.pathname.replace(/^\/api\/v1\/?/, "");
+
+  const segments = raw.split("/").filter(Boolean).map(decodeURIComponent);
+  url.searchParams.delete("path"); // 라우팅용이므로 조회 조건에서 제외한다
   return { segments, params: url.searchParams };
 }
 
