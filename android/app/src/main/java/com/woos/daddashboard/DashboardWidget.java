@@ -5,17 +5,9 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.widget.RemoteViews;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
 public class DashboardWidget extends AppWidgetProvider {
 
@@ -25,55 +17,18 @@ public class DashboardWidget extends AppWidgetProvider {
     }
 
     static void refresh(Context context, AppWidgetManager manager, int[] ids) {
-        for (int id : ids) renderLoading(context, manager, id);
+        for (int id : ids) render(context, manager, id, -1, -1, "불러오는 중…");
 
         new Thread(() -> {
-            SharedPreferences prefs = context.getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE);
-            String authCookie = prefs.getString(MainActivity.KEY_AUTH_COOKIE, "");
-            if (authCookie.isEmpty()) {
-                for (int id : ids) render(context, manager, id, -1, -1, "앱을 열어 먼저 연결해줘");
-                return;
-            }
-
             try {
-                JSONObject payload = getTasks(authCookie);
-                JSONArray tasks = payload.optJSONArray("tasks");
-                int needsCheck = 0;
-                int unfinished = 0;
-                if (tasks != null) {
-                    for (int i = 0; i < tasks.length(); i++) {
-                        JSONObject t = tasks.optJSONObject(i);
-                        if (t == null) continue;
-                        if (t.optBoolean("needsCheck", false)) needsCheck++;
-                        if (!"완료".equals(t.optString("status", ""))) unfinished++;
-                    }
-                }
-                for (int id : ids) render(context, manager, id, needsCheck, unfinished, "눌러서 대시보드 열기");
+                JSONObject payload = MainActivity.fetchSummary();
+                int needsCheck = payload.optInt("needsCheck", -1);
+                int unfinished = payload.optInt("unfinished", -1);
+                for (int id : ids) render(context, manager, id, needsCheck, unfinished, "눌러서 요약 열기");
             } catch (Exception e) {
-                for (int id : ids) render(context, manager, id, -1, -1, "앱을 열어 다시 연결해줘");
+                for (int id : ids) render(context, manager, id, -1, -1, "새로고침 실패");
             }
         }).start();
-    }
-
-    private static JSONObject getTasks(String authCookie) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(MainActivity.BASE_URL + "/api/tasks").openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Cookie", authCookie);
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(10000);
-        int code = conn.getResponseCode();
-        if (code != 200) throw new IllegalStateException("HTTP " + code);
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-        }
-        conn.disconnect();
-        return new JSONObject(sb.toString());
-    }
-
-    private static void renderLoading(Context context, AppWidgetManager manager, int id) {
-        render(context, manager, id, -1, -1, "불러오는 중…");
     }
 
     private static void render(Context context, AppWidgetManager manager, int id,
