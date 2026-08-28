@@ -9,6 +9,7 @@ on:
       - scripts/patch-needs-check.mjs
       - scripts/patch-needs-check-id.mjs
       - scripts/fix-needs-check-runtime.mjs
+      - scripts/fix-task-modal-location.mjs
       - .github/workflows/apply-needs-check.yml
 
 permissions:
@@ -31,6 +32,7 @@ jobs:
           node scripts/patch-needs-check.mjs
           node scripts/patch-needs-check-id.mjs
           node scripts/fix-needs-check-runtime.mjs
+          node scripts/fix-task-modal-location.mjs
 
       - name: Commit patched index
         run: |
@@ -41,5 +43,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "feat: show needs-check as compact modal"
+          git commit -m "fix: make task detail modal available from home"
           git push
