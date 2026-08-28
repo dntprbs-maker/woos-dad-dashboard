@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+const path='index.html';
+let s=fs.readFileSync(path,'utf8');
+const oldGet='function getNeedsCheckTasks(grouped){return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project})));}';
+const newGet='function getNeedsCheckTasks(grouped){return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project}))).sort((a,b)=>String(a.title||\"\").localeCompare(String(b.title||\"\"),\"ko\"));}';
+if(s.includes(oldGet)) s=s.replace(oldGet,newGet);
+const oldOpen=`function openNeedsCheckTask(id){\n  const item=liveNeedsCheckItems.find(x=>x.id===id);\n  if(!item)return;\n  const detail=document.getElementById(\"modalWrap\");\n  if(detail) detail.classList.add(\"needs-check-detail\");\n  openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);\n}`;
+const newOpen=`function openNeedsCheckTask(id){\n  const item=liveNeedsCheckItems.find(x=>x.id===id);\n  if(!item)return;\n  closeNeedsCheckModal();\n  const detail=document.getElementById(\"modalWrap\");\n  if(detail){\n    detail.classList.add(\"needs-check-detail\");\n    let doneBtn=document.getElementById(\"detailCheckDone\");\n    if(!doneBtn){\n      doneBtn=document.createElement(\"button\");\n      doneBtn.id=\"detailCheckDone\";\n      doneBtn.className=\"close-btn\";\n      doneBtn.style.background=\"#16a34a\";\n      doneBtn.style.marginBottom=\"8px\";\n      doneBtn.textContent=\"확인 완료\";\n      const close=detail.querySelector(\".close-btn\");\n      close?.parentNode?.insertBefore(doneBtn,close);\n    }\n    doneBtn.style.display=\"block\";\n    doneBtn.onclick=async()=>{await confirmNeedsCheck(id);closeTask(true);};\n  }\n  openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);\n}\nfunction openWidgetRequestedTask(){\n  const id=new URLSearchParams(location.search).get(\"widgetTask\");\n  if(!id)return;\n  const item=liveNeedsCheckItems.find(x=>x.id===id);\n  if(!item)return;\n  openNeedsCheckTask(id);\n}`;
+if(s.includes(oldOpen)) s=s.replace(oldOpen,newOpen);
+const anchor='    renderNeedsCheck(grouped);\n    notifyNewNeedsCheck(grouped);';
+const replacement='    renderNeedsCheck(grouped);\n    openWidgetRequestedTask();\n    notifyNewNeedsCheck(grouped);';
+if(s.includes(anchor)) s=s.replace(anchor,replacement);
+fs.writeFileSync(path,s);
