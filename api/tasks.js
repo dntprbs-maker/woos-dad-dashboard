@@ -93,7 +93,7 @@ export default async function handler(req, res) {
         description: plain(p["작업내용"]),
         status: plain(p["상태"]),
         priority: plain(p["우선순위"]),
-        worker: plain(p["수행자"]),
+        worker: plain(p["작업자"]),
         project: plain(p["프로젝트명"]),
         needsCheck: !!plain(p["확인필요"]),
         completedAt: plain(p["완료일시"]),
