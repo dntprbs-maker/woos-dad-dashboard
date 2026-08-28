@@ -1021,7 +1021,7 @@ function normalizeProjectName(rawProject){
 }
 
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));}
-function getNeedsCheckTasks(grouped){return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project})));}
+function getNeedsCheckTasks(grouped){return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project}))).sort((a,b)=>String(a.title||"").localeCompare(String(b.title||""),"ko"));}
 let liveNeedsCheckItems=[];
 function renderNeedsCheck(grouped){
   const panel=document.getElementById("needsCheckPanel");
@@ -1061,9 +1061,32 @@ function needsCheckBackdropClose(e){if(e.target?.id==="needsCheckModalWrap") clo
 function openNeedsCheckTask(id){
   const item=liveNeedsCheckItems.find(x=>x.id===id);
   if(!item)return;
+  closeNeedsCheckModal();
   const detail=document.getElementById("modalWrap");
-  if(detail) detail.classList.add("needs-check-detail");
+  if(detail){
+    detail.classList.add("needs-check-detail");
+    let doneBtn=document.getElementById("detailCheckDone");
+    if(!doneBtn){
+      doneBtn=document.createElement("button");
+      doneBtn.id="detailCheckDone";
+      doneBtn.className="close-btn";
+      doneBtn.style.background="#16a34a";
+      doneBtn.style.marginBottom="8px";
+      doneBtn.textContent="확인 완료";
+      const close=detail.querySelector(".close-btn");
+      close?.parentNode?.insertBefore(doneBtn,close);
+    }
+    doneBtn.style.display="block";
+    doneBtn.onclick=async()=>{await confirmNeedsCheck(id);closeTask(true);};
+  }
   openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);
+}
+function openWidgetRequestedTask(){
+  const id=new URLSearchParams(location.search).get("widgetTask");
+  if(!id)return;
+  const item=liveNeedsCheckItems.find(x=>x.id===id);
+  if(!item)return;
+  openNeedsCheckTask(id);
 }
 function notifyNewNeedsCheck(grouped){
   const ids=getNeedsCheckTasks(grouped).map(x=>x.id).filter(Boolean);
@@ -1135,6 +1158,7 @@ async function loadLiveNotionData(){
     Object.assign(projectTasks, grouped);
 
     renderNeedsCheck(grouped);
+    openWidgetRequestedTask();
     notifyNewNeedsCheck(grouped);
 
     // Rebuild counts on project rows where names match.
