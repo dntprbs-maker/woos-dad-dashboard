@@ -41,5 +41,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "fix: normalize needs-check UI runtime"
+          git commit -m "feat: show needs-check as compact modal"
           git push
