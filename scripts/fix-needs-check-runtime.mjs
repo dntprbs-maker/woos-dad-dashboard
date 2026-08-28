@@ -24,12 +24,16 @@ const compactCss = `
   .needs-check-modal-head strong{font-size:18px;flex:1}.needs-check-modal-close{width:36px;height:36px;border:0;border-radius:11px;background:#f3f5f8;color:#64748b;font-size:22px}
   .needs-check-modal-list{overflow:auto;padding:12px 14px calc(22px + env(safe-area-inset-bottom))}
   .needs-check-modal-list .needs-check-item{margin:0 0 9px;background:#fffdf7}
-  .modal-wrap.needs-check-detail{z-index:140!important}
+  .needs-check-modal-list .needs-check-btn{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation}
+  .modal-wrap.needs-check-detail{z-index:200!important}
 `;
 if(!s.includes('/* 확인필요: 첫 화면 한 줄 + 팝업 목록 */')){
   s = s.replace('\n</style>', compactCss + '\n</style>');
-}else if(!s.includes('.modal-wrap.needs-check-detail')){
-  s = s.replace('\n</style>', '\n  .modal-wrap.needs-check-detail{z-index:140!important}\n</style>');
+}else{
+  if(!s.includes('.needs-check-modal-list .needs-check-btn')){
+    s = s.replace('\n</style>', '\n  .needs-check-modal-list .needs-check-btn{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation}\n</style>');
+  }
+  s = s.replace(/\.modal-wrap\.needs-check-detail\{z-index:\d+!important\}/, '.modal-wrap.needs-check-detail{z-index:200!important}');
 }
 
 const compactPanel = `    <section class="needs-check-panel hidden" id="needsCheckPanel" aria-live="polite">
@@ -79,7 +83,18 @@ const runtime = `function renderNeedsCheck(grouped){
   count.textContent=items.length;
   if(modalCount) modalCount.textContent=items.length;
   panel.classList.toggle("hidden",items.length===0);
-  list.innerHTML=items.length ? items.map(item=>\`<div class="needs-check-item" data-check-id="\${escapeHtml(item.id)}"><div class="needs-check-title">\${escapeHtml(item.title)}</div><div class="needs-check-meta">\${escapeHtml(item.project)} · \${escapeHtml(item.status||"상태 없음")}</div><div class="needs-check-actions"><button class="needs-check-btn needs-check-open" type="button" onclick='openNeedsCheckTask(\${JSON.stringify(item.id)})'>내용 보기</button><button class="needs-check-btn needs-check-done" type="button" onclick='confirmNeedsCheck(\${JSON.stringify(item.id)})'>확인 완료</button></div></div>\`).join("") : '<div class="empty">확인필요 작업이 없습니다.</div>';
+  list.innerHTML=items.length ? items.map(item=>\`<div class="needs-check-item" data-check-id="\${escapeHtml(item.id)}"><div class="needs-check-title">\${escapeHtml(item.title)}</div><div class="needs-check-meta">\${escapeHtml(item.project)} · \${escapeHtml(item.status||"상태 없음")}</div><div class="needs-check-actions"><button class="needs-check-btn needs-check-open" type="button" data-action="open">내용 보기</button><button class="needs-check-btn needs-check-done" type="button" data-action="done">확인 완료</button></div></div>\`).join("") : '<div class="empty">확인필요 작업이 없습니다.</div>';
+  list.onclick=(event)=>{
+    const btn=event.target.closest("button[data-action]");
+    if(!btn||!list.contains(btn))return;
+    event.preventDefault();
+    event.stopPropagation();
+    const row=btn.closest("[data-check-id]");
+    const id=row?.dataset.checkId||"";
+    if(!id)return;
+    if(btn.dataset.action==="open") openNeedsCheckTask(id);
+    if(btn.dataset.action==="done") confirmNeedsCheck(id);
+  };
   if(items.length===0) closeNeedsCheckModal();
 }
 function openNeedsCheckModal(){
@@ -97,7 +112,6 @@ function openNeedsCheckTask(id){
   if(!item)return;
   const detail=document.getElementById("modalWrap");
   if(detail) detail.classList.add("needs-check-detail");
-  // 목록 팝업은 닫지 않는다. 상세 팝업을 그 위에 띄워 닫으면 목록으로 돌아오게 한다.
   openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);
 }
 function notifyNewNeedsCheck(grouped){
@@ -109,7 +123,8 @@ function notifyNewNeedsCheck(grouped){
   if("Notification" in window&&Notification.permission==="granted"){try{new Notification("아빠 대시보드",{body:\`새 확인필요 작업 \${fresh.length}건이 있습니다\`})}catch(e){}}
 }
 async function confirmNeedsCheck(id){
-  const btn=document.querySelector(\`[data-check-id="\${CSS.escape(id)}"] .needs-check-done\`);
+  const row=[...document.querySelectorAll("[data-check-id]")].find(el=>el.dataset.checkId===id);
+  const btn=row?.querySelector(".needs-check-done");
   if(btn){btn.disabled=true;btn.textContent="처리 중…"}
   try{
     const res=await fetch("/api/check-task",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({id})});
@@ -127,4 +142,4 @@ async function confirmNeedsCheck(id){
 
 s = s.slice(0,start) + runtime + s.slice(end);
 fs.writeFileSync(path,s);
-console.log('needs-check compact summary + modal applied');
+console.log('needs-check delegated actions applied');
