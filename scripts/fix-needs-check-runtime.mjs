@@ -24,9 +24,12 @@ const compactCss = `
   .needs-check-modal-head strong{font-size:18px;flex:1}.needs-check-modal-close{width:36px;height:36px;border:0;border-radius:11px;background:#f3f5f8;color:#64748b;font-size:22px}
   .needs-check-modal-list{overflow:auto;padding:12px 14px calc(22px + env(safe-area-inset-bottom))}
   .needs-check-modal-list .needs-check-item{margin:0 0 9px;background:#fffdf7}
+  .modal-wrap.needs-check-detail{z-index:140!important}
 `;
 if(!s.includes('/* 확인필요: 첫 화면 한 줄 + 팝업 목록 */')){
   s = s.replace('\n</style>', compactCss + '\n</style>');
+}else if(!s.includes('.modal-wrap.needs-check-detail')){
+  s = s.replace('\n</style>', '\n  .modal-wrap.needs-check-detail{z-index:140!important}\n</style>');
 }
 
 const compactPanel = `    <section class="needs-check-panel hidden" id="needsCheckPanel" aria-live="polite">
@@ -92,9 +95,9 @@ function needsCheckBackdropClose(e){if(e.target?.id==="needsCheckModalWrap") clo
 function openNeedsCheckTask(id){
   const item=liveNeedsCheckItems.find(x=>x.id===id);
   if(!item)return;
-  closeNeedsCheckModal();
-  // 확인필요 목록은 홈 화면에서 여는 오버레이이므로 URL hash를 바꾸지 않는다.
-  // hash 변경 시 라우터가 오버레이를 닫고 홈을 다시 그려 상세창이 사라지는 문제가 생긴다.
+  const detail=document.getElementById("modalWrap");
+  if(detail) detail.classList.add("needs-check-detail");
+  // 목록 팝업은 닫지 않는다. 상세 팝업을 그 위에 띄워 닫으면 목록으로 돌아오게 한다.
   openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);
 }
 function notifyNewNeedsCheck(grouped){
