@@ -557,6 +557,21 @@
     </div>
   </div>
 
+<div class="modal-wrap" id="modalWrap" onclick="backdropClose(event)">
+  <div class="modal">
+    <div class="handle"></div>
+    <h3 id="mTitle">작업 제목</h3>
+    <div class="detail-grid">
+      <div class="k">프로젝트</div><div class="v" id="mProject"></div>
+      <div class="k">상태</div><div class="v" id="mStatus"></div>
+      <div class="k">중요도</div><div class="v" id="mPriority"></div>
+      <div class="k">담당</div><div class="v" id="mWorker"></div>
+    </div>
+    <div class="desc" id="mDesc"></div>
+    <button class="close-btn" onclick="closeTask()">닫기</button>
+  </div>
+</div>
+
   <div class="detail-page" id="detailPage">
     <div class="detail-top">
       <button class="back-btn" onclick="goHome()">‹</button>
@@ -617,20 +632,6 @@
   </div>
 </div>
 
-<div class="modal-wrap" id="modalWrap" onclick="backdropClose(event)">
-  <div class="modal">
-    <div class="handle"></div>
-    <h3 id="mTitle">작업 제목</h3>
-    <div class="detail-grid">
-      <div class="k">프로젝트</div><div class="v" id="mProject"></div>
-      <div class="k">상태</div><div class="v" id="mStatus"></div>
-      <div class="k">중요도</div><div class="v" id="mPriority"></div>
-      <div class="k">담당</div><div class="v" id="mWorker"></div>
-    </div>
-    <div class="desc" id="mDesc"></div>
-    <button class="close-btn" onclick="closeTask()">닫기</button>
-  </div>
-</div>
 
 <script>
 // ⚠️ 시안(자리 채우기) 데이터 — 노션 API 응답이 오기 전 잠깐만 보인다.
