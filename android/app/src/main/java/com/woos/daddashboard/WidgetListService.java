@@ -82,8 +82,7 @@ public class WidgetListService extends RemoteViewsService {
             Intent fill = new Intent();
             fill.putExtra("task_id", item.id);
             fill.putExtra("task_title", item.title);
-            views.setOnClickFillInIntent(R.id.itemTitle, fill);
-            views.setOnClickFillInIntent(R.id.itemMeta, fill);
+            views.setOnClickFillInIntent(R.id.itemRoot, fill);
             return views;
         }
 
