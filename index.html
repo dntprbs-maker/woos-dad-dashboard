@@ -482,7 +482,8 @@
   .needs-check-modal-list{overflow:auto;padding:12px 14px calc(22px + env(safe-area-inset-bottom))}
   .needs-check-modal-list .needs-check-item{margin:0 0 9px;background:#fffdf7}
 
-  .modal-wrap.needs-check-detail{z-index:140!important}
+  .modal-wrap.needs-check-detail{z-index:200!important}
+  .needs-check-modal-list .needs-check-btn{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -1032,7 +1033,18 @@ function renderNeedsCheck(grouped){
   count.textContent=items.length;
   if(modalCount) modalCount.textContent=items.length;
   panel.classList.toggle("hidden",items.length===0);
-  list.innerHTML=items.length ? items.map(item=>`<div class="needs-check-item" data-check-id="${escapeHtml(item.id)}"><div class="needs-check-title">${escapeHtml(item.title)}</div><div class="needs-check-meta">${escapeHtml(item.project)} · ${escapeHtml(item.status||"상태 없음")}</div><div class="needs-check-actions"><button class="needs-check-btn needs-check-open" type="button" onclick='openNeedsCheckTask(${JSON.stringify(item.id)})'>내용 보기</button><button class="needs-check-btn needs-check-done" type="button" onclick='confirmNeedsCheck(${JSON.stringify(item.id)})'>확인 완료</button></div></div>`).join("") : '<div class="empty">확인필요 작업이 없습니다.</div>';
+  list.innerHTML=items.length ? items.map(item=>`<div class="needs-check-item" data-check-id="${escapeHtml(item.id)}"><div class="needs-check-title">${escapeHtml(item.title)}</div><div class="needs-check-meta">${escapeHtml(item.project)} · ${escapeHtml(item.status||"상태 없음")}</div><div class="needs-check-actions"><button class="needs-check-btn needs-check-open" type="button" data-action="open">내용 보기</button><button class="needs-check-btn needs-check-done" type="button" data-action="done">확인 완료</button></div></div>`).join("") : '<div class="empty">확인필요 작업이 없습니다.</div>';
+  list.onclick=(event)=>{
+    const btn=event.target.closest("button[data-action]");
+    if(!btn||!list.contains(btn))return;
+    event.preventDefault();
+    event.stopPropagation();
+    const row=btn.closest("[data-check-id]");
+    const id=row?.dataset.checkId||"";
+    if(!id)return;
+    if(btn.dataset.action==="open") openNeedsCheckTask(id);
+    if(btn.dataset.action==="done") confirmNeedsCheck(id);
+  };
   if(items.length===0) closeNeedsCheckModal();
 }
 function openNeedsCheckModal(){
@@ -1050,7 +1062,6 @@ function openNeedsCheckTask(id){
   if(!item)return;
   const detail=document.getElementById("modalWrap");
   if(detail) detail.classList.add("needs-check-detail");
-  // 목록 팝업은 닫지 않는다. 상세 팝업을 그 위에 띄워 닫으면 목록으로 돌아오게 한다.
   openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);
 }
 function notifyNewNeedsCheck(grouped){
@@ -1062,7 +1073,8 @@ function notifyNewNeedsCheck(grouped){
   if("Notification" in window&&Notification.permission==="granted"){try{new Notification("아빠 대시보드",{body:`새 확인필요 작업 ${fresh.length}건이 있습니다`})}catch(e){}}
 }
 async function confirmNeedsCheck(id){
-  const btn=document.querySelector(`[data-check-id="${CSS.escape(id)}"] .needs-check-done`);
+  const row=[...document.querySelectorAll("[data-check-id]")].find(el=>el.dataset.checkId===id);
+  const btn=row?.querySelector(".needs-check-done");
   if(btn){btn.disabled=true;btn.textContent="처리 중…"}
   try{
     const res=await fetch("/api/check-task",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({id})});
