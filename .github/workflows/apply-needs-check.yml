@@ -11,6 +11,7 @@ on:
       - scripts/fix-needs-check-runtime.mjs
       - scripts/fix-task-modal-location.mjs
       - scripts/patch-worker-terminology.mjs
+      - scripts/patch-widget-direct-task.mjs
       - .github/workflows/apply-needs-check.yml
 
 permissions:
@@ -35,6 +36,7 @@ jobs:
           node scripts/fix-needs-check-runtime.mjs
           node scripts/fix-task-modal-location.mjs
           node scripts/patch-worker-terminology.mjs
+          node scripts/patch-widget-direct-task.mjs
 
       - name: Commit patched index
         run: |
@@ -45,5 +47,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "feat: standardize worker terminology to 작업자"
+          git commit -m "feat: open widget tasks directly in detail"
           git push
