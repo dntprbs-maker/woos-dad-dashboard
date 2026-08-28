@@ -1,0 +1,56 @@
+name: Build Dad Dashboard Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-android-widget.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build debug APK
+        working-directory: android
+        run: gradle assembleDebug --stacktrace
+
+      - name: Copy APK with friendly name
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk woos-dad-dashboard.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: woos-dad-dashboard-apk
+          path: woos-dad-dashboard.apk
+          retention-days: 30
+
+      - name: Publish latest APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view dad-dashboard-android-latest >/dev/null 2>&1; then
+            gh release upload dad-dashboard-android-latest woos-dad-dashboard.apk --clobber
+          else
+            gh release create dad-dashboard-android-latest woos-dad-dashboard.apk \
+              --title '아빠 대시보드 Android 최신 APK' \
+              --notes '개인 설치용 최신 APK. 앱을 열어 대시보드 비밀번호를 한 번 입력한 뒤 홈 화면에 위젯을 추가하세요.'
+          fi
