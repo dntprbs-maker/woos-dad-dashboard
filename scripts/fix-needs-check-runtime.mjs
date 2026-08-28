@@ -93,7 +93,9 @@ function openNeedsCheckTask(id){
   const item=liveNeedsCheckItems.find(x=>x.id===id);
   if(!item)return;
   closeNeedsCheckModal();
-  openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,true);
+  // 확인필요 목록은 홈 화면에서 여는 오버레이이므로 URL hash를 바꾸지 않는다.
+  // hash 변경 시 라우터가 오버레이를 닫고 홈을 다시 그려 상세창이 사라지는 문제가 생긴다.
+  openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);
 }
 function notifyNewNeedsCheck(grouped){
   const ids=getNeedsCheckTasks(grouped).map(x=>x.id).filter(Boolean);
