@@ -565,7 +565,7 @@
       <div class="k">프로젝트</div><div class="v" id="mProject"></div>
       <div class="k">상태</div><div class="v" id="mStatus"></div>
       <div class="k">중요도</div><div class="v" id="mPriority"></div>
-      <div class="k">담당</div><div class="v" id="mWorker"></div>
+      <div class="k">작업자</div><div class="v" id="mWorker"></div>
     </div>
     <div class="desc" id="mDesc"></div>
     <button class="close-btn" onclick="closeTask()">닫기</button>
@@ -612,7 +612,7 @@
     <input type="hidden" id="selectedType" value="업무협조">
 
     <label class="form-label" id="workerLabel">누구에게 요청하나요?</label>
-    <input class="form-input" id="workerInput" placeholder="예: 담당자 이름" />
+    <input class="form-input" id="workerInput" placeholder="예: 작업자 이름" />
 
     <label class="form-label">내용</label>
     <textarea class="form-textarea" id="workText" placeholder="예: 사장님께 블로그 사진 정리 확인 부탁드립니다."></textarea>
@@ -627,7 +627,7 @@
     </div>
 
     <div class="ai-note">
-      ✨ 실제 연결 시 AI가 프로젝트·작성자·의뢰자·수행자·상태·작업유형을 판단하고, 애매한 내용은 바로 저장하지 않고 다시 질문합니다.
+      ✨ 실제 연결 시 AI가 프로젝트·작성자·의뢰자·작업자·상태·작업유형을 판단하고, 애매한 내용은 바로 저장하지 않고 다시 질문합니다.
     </div>
   </div>
 </div>
@@ -844,7 +844,7 @@ function openWorkPopup(type, addHistory=true){
   document.getElementById("selectedType").value=type;
   document.getElementById("selectedTypeText").textContent=type==="처리결과" ? "결과입력" : "업무협조";
   document.getElementById("workerLabel").textContent=type==="처리결과" ? "누가 처리했나요?" : "누구에게 요청하나요?";
-  document.getElementById("workerInput").placeholder=type==="처리결과" ? "예: 담당자 이름" : "예: 담당자 이름";
+  document.getElementById("workerInput").placeholder=type==="처리결과" ? "예: 작업자 이름" : "예: 작업자 이름";
   document.getElementById("workText").placeholder=type==="처리결과"
     ? "예: 블로그 글 2개 작성 완료했고 사진 정리까지 끝냈습니다."
     : "예: 사장님께 블로그 사진 확인 부탁드립니다.";
