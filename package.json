@@ -2,9 +2,5 @@
   "name": "woos-dad-dashboard",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "build": "node scripts/patch-needs-check.mjs && node scripts/patch-needs-check-id.mjs",
-    "vercel-build": "node scripts/patch-needs-check.mjs && node scripts/patch-needs-check-id.mjs"
-  }
+  "type": "module"
 }
