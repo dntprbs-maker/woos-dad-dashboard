@@ -13,7 +13,6 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -30,20 +29,14 @@ public class DashboardWidget extends AppWidgetProvider {
 
         new Thread(() -> {
             SharedPreferences prefs = context.getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE);
-            String password = prefs.getString(MainActivity.KEY_PASSWORD, "");
-            if (password.isEmpty()) {
+            String authCookie = prefs.getString(MainActivity.KEY_AUTH_COOKIE, "");
+            if (authCookie.isEmpty()) {
                 for (int id : ids) render(context, manager, id, -1, -1, "앱을 열어 먼저 연결해줘");
                 return;
             }
 
             try {
-                String cookie = login(password);
-                if (cookie == null) {
-                    for (int id : ids) render(context, manager, id, -1, -1, "인증을 다시 해줘");
-                    return;
-                }
-
-                JSONObject payload = getTasks(cookie);
+                JSONObject payload = getTasks(authCookie);
                 JSONArray tasks = payload.optJSONArray("tasks");
                 int needsCheck = 0;
                 int unfinished = 0;
@@ -57,35 +50,15 @@ public class DashboardWidget extends AppWidgetProvider {
                 }
                 for (int id : ids) render(context, manager, id, needsCheck, unfinished, "눌러서 대시보드 열기");
             } catch (Exception e) {
-                for (int id : ids) render(context, manager, id, -1, -1, "새로고침 실패");
+                for (int id : ids) render(context, manager, id, -1, -1, "앱을 열어 다시 연결해줘");
             }
         }).start();
     }
 
-    private static String login(String password) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(MainActivity.BASE_URL + "/api/login").openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setDoOutput(true);
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(10000);
-        String body = "{\"password\":\"" + MainActivity.escapeJson(password) + "\"}";
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(body.getBytes(StandardCharsets.UTF_8));
-        }
-        if (conn.getResponseCode() != 200) {
-            conn.disconnect();
-            return null;
-        }
-        String cookie = conn.getHeaderField("Set-Cookie");
-        conn.disconnect();
-        return cookie;
-    }
-
-    private static JSONObject getTasks(String cookie) throws Exception {
+    private static JSONObject getTasks(String authCookie) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(MainActivity.BASE_URL + "/api/tasks").openConnection();
         conn.setRequestMethod("GET");
-        conn.setRequestProperty("Cookie", cookie);
+        conn.setRequestProperty("Cookie", authCookie);
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
         int code = conn.getResponseCode();
