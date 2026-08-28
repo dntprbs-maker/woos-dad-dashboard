@@ -1021,7 +1021,17 @@ function normalizeProjectName(rawProject){
 }
 
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));}
-function getNeedsCheckTasks(grouped){return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project}))).sort((a,b)=>String(a.title||"").localeCompare(String(b.title||""),"ko"));}
+function getNeedsCheckTasks(grouped){
+  const order=["클린멤버","클린매니저","크리너리","KBO","마스터 프로젝트","다인이벤트","AI 업무 시스템","기타"];
+  return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project}))).sort((a,b)=>{
+    const ai=order.includes(a.project)?order.indexOf(a.project):999;
+    const bi=order.includes(b.project)?order.indexOf(b.project):999;
+    if(ai!==bi)return ai-bi;
+    const ad=a.status==="완료"?1:0, bd=b.status==="완료"?1:0;
+    if(ad!==bd)return ad-bd;
+    return String(a.title||"").localeCompare(String(b.title||""),"ko");
+  });
+}
 let liveNeedsCheckItems=[];
 function renderNeedsCheck(grouped){
   const panel=document.getElementById("needsCheckPanel");
