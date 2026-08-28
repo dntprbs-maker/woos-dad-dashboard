@@ -47,11 +47,22 @@
         android:textSize="13sp" />
 
     <TextView
-        android:id="@+id/footer"
+        android:id="@+id/unfinished"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="목록을 위아래로 스크롤할 수 있어요"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
+        android:text="📋 미완료 -"
+        android:textColor="#334155"
+        android:textStyle="bold"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="확인필요는 스크롤 · 미완료를 누르면 대시보드 열기"
         android:textColor="#7C879D"
         android:textSize="10sp" />
 </LinearLayout>
