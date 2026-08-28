@@ -20,8 +20,6 @@ const panelAnchor='    <div class="section-title">\n      <h2>프로젝트</h2>'
 if(!s.includes(panelAnchor)) throw new Error('project section anchor not found');
 s=s.replace(panelAnchor,panel+'\n'+panelAnchor);
 
-s=s.replace('        id: page.id,\n        title: t.title || "(제목 없음)",','        id: t.id || "",\n        title: t.title || "(제목 없음)",');
-
 const helper=String.raw`
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));}
 function getNeedsCheckTasks(grouped){return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project})));}
@@ -40,3 +38,5 @@ s=s.replace(assign,assign+'\n\n    renderNeedsCheck(grouped);\n    notifyNewNeed
 
 fs.writeFileSync(path,s);
 console.log('needs-check UI injected');
+
+// Trigger marker: workflow applies this patch to index.html on main.
