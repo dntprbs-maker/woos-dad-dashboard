@@ -458,6 +458,32 @@
     -webkit-backdrop-filter:blur(5px);
   }
 
+  .needs-check-panel{background:#fff8e8;border:1px solid #fde3a7;border-radius:18px;padding:14px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .needs-check-panel.hidden{display:none}.needs-check-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.needs-check-head strong{font-size:16px}.needs-check-count{background:#f59e0b;color:#fff;border-radius:999px;min-width:25px;height:25px;padding:0 7px;display:grid;place-items:center;font-size:12px;font-weight:800}.needs-check-item{background:#fff;border:1px solid #f5d48a;border-radius:13px;padding:11px 12px;margin-top:8px}.needs-check-title{font-size:14px;font-weight:800;line-height:1.4}.needs-check-meta{font-size:11px;color:#8a6a20;margin-top:4px}.needs-check-actions{display:flex;gap:7px;margin-top:9px}.needs-check-btn{border:0;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:800}.needs-check-open{background:#f3f5f8;color:#475569}.needs-check-done{background:#16a34a;color:#fff}
+
+  /* 확인필요: 첫 화면 한 줄 + 팝업 목록 */
+  .needs-check-panel{
+    background:transparent!important;border:0!important;border-radius:0!important;
+    padding:0!important;margin:0 0 16px!important;box-shadow:none!important;
+  }
+  .needs-check-summary{
+    width:100%;border:1px solid #fde3a7;background:#fff8e8;border-radius:16px;
+    min-height:58px;padding:0 15px;display:flex;align-items:center;gap:10px;
+    color:var(--text);text-align:left;box-shadow:var(--shadow);cursor:pointer;
+  }
+  .needs-check-summary .summary-label{font-size:15px;font-weight:800;flex:1}
+  .needs-check-summary .needs-check-count{display:grid;place-items:center;min-width:28px;height:28px;padding:0 8px;background:#f59e0b;color:#fff;border-radius:999px;font-size:12px;font-weight:800}
+  .needs-check-summary .summary-arrow{font-size:22px;color:#9a6a00;line-height:1}
+  .needs-check-modal-wrap{position:fixed;inset:0;background:rgba(15,23,42,.38);display:none;align-items:flex-end;justify-content:center;z-index:120;padding-top:36px}
+  .needs-check-modal-wrap.show{display:flex}
+  .needs-check-modal{width:100%;max-width:480px;max-height:88vh;overflow:hidden;background:#fff;border-radius:24px 24px 0 0;box-shadow:0 -16px 44px rgba(15,23,42,.2);display:flex;flex-direction:column}
+  .needs-check-modal-head{display:flex;align-items:center;gap:9px;padding:17px 16px 13px;border-bottom:1px solid var(--line)}
+  .needs-check-modal-head strong{font-size:18px;flex:1}.needs-check-modal-close{width:36px;height:36px;border:0;border-radius:11px;background:#f3f5f8;color:#64748b;font-size:22px}
+  .needs-check-modal-list{overflow:auto;padding:12px 14px calc(22px + env(safe-area-inset-bottom))}
+  .needs-check-modal-list .needs-check-item{margin:0 0 9px;background:#fffdf7}
+
+  .modal-wrap.needs-check-detail{z-index:200!important}
+  .needs-check-modal-list .needs-check-btn{position:relative;z-index:2;pointer-events:auto;touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -469,6 +495,28 @@
         <p>보고 싶은 프로젝트를 선택하세요</p>
       </div>
       <div class="avatar">👨‍💼</div>
+    </div>
+
+
+    <section class="needs-check-panel hidden" id="needsCheckPanel" aria-live="polite">
+      <button class="needs-check-summary" type="button" onclick="openNeedsCheckModal()" aria-label="확인필요 작업 열기">
+        <span aria-hidden="true">🔔</span>
+        <span class="summary-label">확인필요</span>
+        <span class="needs-check-count" id="needsCheckCount">0</span>
+        <span class="summary-arrow" aria-hidden="true">›</span>
+      </button>
+    </section>
+
+    <div class="needs-check-modal-wrap" id="needsCheckModalWrap" onclick="needsCheckBackdropClose(event)">
+      <div class="needs-check-modal" role="dialog" aria-modal="true" aria-labelledby="needsCheckModalTitle">
+        <div class="needs-check-modal-head">
+          <span aria-hidden="true">🔔</span>
+          <strong id="needsCheckModalTitle">확인필요 작업</strong>
+          <span class="needs-check-count" id="needsCheckModalCount">0</span>
+          <button class="needs-check-modal-close" type="button" onclick="closeNeedsCheckModal()" aria-label="닫기">×</button>
+        </div>
+        <div class="needs-check-modal-list" id="needsCheckList"></div>
+      </div>
     </div>
 
     <div class="section-title">
@@ -508,6 +556,21 @@
       Notion 실데이터를 불러와 프로젝트별로 표시합니다.
     </div>
   </div>
+
+<div class="modal-wrap" id="modalWrap" onclick="backdropClose(event)">
+  <div class="modal">
+    <div class="handle"></div>
+    <h3 id="mTitle">작업 제목</h3>
+    <div class="detail-grid">
+      <div class="k">프로젝트</div><div class="v" id="mProject"></div>
+      <div class="k">상태</div><div class="v" id="mStatus"></div>
+      <div class="k">중요도</div><div class="v" id="mPriority"></div>
+      <div class="k">작업자</div><div class="v" id="mWorker"></div>
+    </div>
+    <div class="desc" id="mDesc"></div>
+    <button class="close-btn" onclick="closeTask()">닫기</button>
+  </div>
+</div>
 
   <div class="detail-page" id="detailPage">
     <div class="detail-top">
@@ -549,7 +612,7 @@
     <input type="hidden" id="selectedType" value="업무협조">
 
     <label class="form-label" id="workerLabel">누구에게 요청하나요?</label>
-    <input class="form-input" id="workerInput" placeholder="예: 담당자 이름" />
+    <input class="form-input" id="workerInput" placeholder="예: 작업자 이름" />
 
     <label class="form-label">내용</label>
     <textarea class="form-textarea" id="workText" placeholder="예: 사장님께 블로그 사진 정리 확인 부탁드립니다."></textarea>
@@ -564,25 +627,11 @@
     </div>
 
     <div class="ai-note">
-      ✨ 실제 연결 시 AI가 프로젝트·작성자·의뢰자·수행자·상태·작업유형을 판단하고, 애매한 내용은 바로 저장하지 않고 다시 질문합니다.
+      ✨ 실제 연결 시 AI가 프로젝트·작성자·의뢰자·작업자·상태·작업유형을 판단하고, 애매한 내용은 바로 저장하지 않고 다시 질문합니다.
     </div>
   </div>
 </div>
 
-<div class="modal-wrap" id="modalWrap" onclick="backdropClose(event)">
-  <div class="modal">
-    <div class="handle"></div>
-    <h3 id="mTitle">작업 제목</h3>
-    <div class="detail-grid">
-      <div class="k">프로젝트</div><div class="v" id="mProject"></div>
-      <div class="k">상태</div><div class="v" id="mStatus"></div>
-      <div class="k">중요도</div><div class="v" id="mPriority"></div>
-      <div class="k">담당</div><div class="v" id="mWorker"></div>
-    </div>
-    <div class="desc" id="mDesc"></div>
-    <button class="close-btn" onclick="closeTask()">닫기</button>
-  </div>
-</div>
 
 <script>
 // ⚠️ 시안(자리 채우기) 데이터 — 노션 API 응답이 오기 전 잠깐만 보인다.
@@ -795,7 +844,7 @@ function openWorkPopup(type, addHistory=true){
   document.getElementById("selectedType").value=type;
   document.getElementById("selectedTypeText").textContent=type==="처리결과" ? "결과입력" : "업무협조";
   document.getElementById("workerLabel").textContent=type==="처리결과" ? "누가 처리했나요?" : "누구에게 요청하나요?";
-  document.getElementById("workerInput").placeholder=type==="처리결과" ? "예: 담당자 이름" : "예: 담당자 이름";
+  document.getElementById("workerInput").placeholder=type==="처리결과" ? "예: 작업자 이름" : "예: 작업자 이름";
   document.getElementById("workText").placeholder=type==="처리결과"
     ? "예: 블로그 글 2개 작성 완료했고 사진 정리까지 끝냈습니다."
     : "예: 사장님께 블로그 사진 확인 부탁드립니다.";
@@ -971,6 +1020,109 @@ function normalizeProjectName(rawProject){
   return exactMap[key] || "기타";
 }
 
+function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));}
+function getNeedsCheckTasks(grouped){
+  const order=["클린멤버","클린매니저","크리너리","KBO","마스터 프로젝트","다인이벤트","AI 업무 시스템","기타"];
+  return Object.entries(grouped||{}).flatMap(([project,data])=>[...(data.todo||[]),...(data.done||[])].filter(x=>x.needsCheck).map(x=>({...x,project}))).sort((a,b)=>{
+    const ai=order.includes(a.project)?order.indexOf(a.project):999;
+    const bi=order.includes(b.project)?order.indexOf(b.project):999;
+    if(ai!==bi)return ai-bi;
+    const ad=a.status==="완료"?1:0, bd=b.status==="완료"?1:0;
+    if(ad!==bd)return ad-bd;
+    return String(a.title||"").localeCompare(String(b.title||""),"ko");
+  });
+}
+let liveNeedsCheckItems=[];
+function renderNeedsCheck(grouped){
+  const panel=document.getElementById("needsCheckPanel");
+  const list=document.getElementById("needsCheckList");
+  const count=document.getElementById("needsCheckCount");
+  const modalCount=document.getElementById("needsCheckModalCount");
+  if(!panel||!list||!count)return;
+  const items=getNeedsCheckTasks(grouped);
+  liveNeedsCheckItems=items;
+  count.textContent=items.length;
+  if(modalCount) modalCount.textContent=items.length;
+  panel.classList.toggle("hidden",items.length===0);
+  list.innerHTML=items.length ? items.map(item=>`<div class="needs-check-item" data-check-id="${escapeHtml(item.id)}"><div class="needs-check-title">${escapeHtml(item.title)}</div><div class="needs-check-meta">${escapeHtml(item.project)} · ${escapeHtml(item.status||"상태 없음")}</div><div class="needs-check-actions"><button class="needs-check-btn needs-check-open" type="button" data-action="open">내용 보기</button><button class="needs-check-btn needs-check-done" type="button" data-action="done">확인 완료</button></div></div>`).join("") : '<div class="empty">확인필요 작업이 없습니다.</div>';
+  list.onclick=(event)=>{
+    const btn=event.target.closest("button[data-action]");
+    if(!btn||!list.contains(btn))return;
+    event.preventDefault();
+    event.stopPropagation();
+    const row=btn.closest("[data-check-id]");
+    const id=row?.dataset.checkId||"";
+    if(!id)return;
+    if(btn.dataset.action==="open") openNeedsCheckTask(id);
+    if(btn.dataset.action==="done") confirmNeedsCheck(id);
+  };
+  if(items.length===0) closeNeedsCheckModal();
+}
+function openNeedsCheckModal(){
+  if(!liveNeedsCheckItems.length)return;
+  document.getElementById("needsCheckModalWrap")?.classList.add("show");
+  document.body.style.overflow="hidden";
+}
+function closeNeedsCheckModal(){
+  document.getElementById("needsCheckModalWrap")?.classList.remove("show");
+  document.body.style.overflow="";
+}
+function needsCheckBackdropClose(e){if(e.target?.id==="needsCheckModalWrap") closeNeedsCheckModal();}
+function openNeedsCheckTask(id){
+  const item=liveNeedsCheckItems.find(x=>x.id===id);
+  if(!item)return;
+  closeNeedsCheckModal();
+  const detail=document.getElementById("modalWrap");
+  if(detail){
+    detail.classList.add("needs-check-detail");
+    let doneBtn=document.getElementById("detailCheckDone");
+    if(!doneBtn){
+      doneBtn=document.createElement("button");
+      doneBtn.id="detailCheckDone";
+      doneBtn.className="close-btn";
+      doneBtn.style.background="#16a34a";
+      doneBtn.style.marginBottom="8px";
+      doneBtn.textContent="확인 완료";
+      const close=detail.querySelector(".close-btn");
+      close?.parentNode?.insertBefore(doneBtn,close);
+    }
+    doneBtn.style.display="block";
+    doneBtn.onclick=async()=>{await confirmNeedsCheck(id);closeTask(true);};
+  }
+  openTask(item.title,item.project,item.status,item.priority,item.worker,item.desc,false);
+}
+function openWidgetRequestedTask(){
+  const id=new URLSearchParams(location.search).get("widgetTask");
+  if(!id)return;
+  const item=liveNeedsCheckItems.find(x=>x.id===id);
+  if(!item)return;
+  openNeedsCheckTask(id);
+}
+function notifyNewNeedsCheck(grouped){
+  const ids=getNeedsCheckTasks(grouped).map(x=>x.id).filter(Boolean);
+  let seen=[];try{seen=JSON.parse(localStorage.getItem("dadNeedsCheckSeen")||"[]")}catch(e){}
+  const fresh=ids.filter(id=>!seen.includes(id));if(!fresh.length)return;
+  localStorage.setItem("dadNeedsCheckSeen",JSON.stringify([...new Set([...seen,...fresh])].slice(-300)));
+  const t=document.getElementById("toast");if(t){t.textContent=`🔔 새 확인필요 작업 ${fresh.length}건이 있습니다`;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),3500)}
+  if("Notification" in window&&Notification.permission==="granted"){try{new Notification("아빠 대시보드",{body:`새 확인필요 작업 ${fresh.length}건이 있습니다`})}catch(e){}}
+}
+async function confirmNeedsCheck(id){
+  const row=[...document.querySelectorAll("[data-check-id]")].find(el=>el.dataset.checkId===id);
+  const btn=row?.querySelector(".needs-check-done");
+  if(btn){btn.disabled=true;btn.textContent="처리 중…"}
+  try{
+    const res=await fetch("/api/check-task",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({id})});
+    const payload=await res.json().catch(()=>({}));
+    if(!res.ok||!payload.ok)throw new Error(payload.error||`API ${res.status}`);
+    await loadLiveNotionData();
+    const t=document.getElementById("toast");if(t){t.textContent="확인 완료 · 목록에서 제거했습니다";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent="확인 완료"}
+    const t=document.getElementById("toast");if(t){t.textContent="확인 처리에 실패했습니다";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+    console.error(e)
+  }
+}
+
 async function loadLiveNotionData(){
   const badge = document.getElementById("liveDataStatus");
   try{
@@ -987,6 +1139,7 @@ async function loadLiveNotionData(){
       if(!grouped[p]) grouped[p] = {todo:[], done:[]};
 
       const item = {
+        id: t.id || "",
         title: t.title || "(제목 없음)",
         status: t.status || "",
         priority: t.priority || "",
@@ -1013,6 +1166,10 @@ async function loadLiveNotionData(){
     // Existing UI expects projectTasks. Replace mock data with live data.
     for(const key of Object.keys(projectTasks)) delete projectTasks[key];
     Object.assign(projectTasks, grouped);
+
+    renderNeedsCheck(grouped);
+    openWidgetRequestedTask();
+    notifyNewNeedsCheck(grouped);
 
     // Rebuild counts on project rows where names match.
     document.querySelectorAll("#projectMenu .project-row").forEach(row=>{

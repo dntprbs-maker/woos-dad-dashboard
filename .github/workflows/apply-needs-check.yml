@@ -1,0 +1,51 @@
+name: Apply needs-check UI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/patch-needs-check.mjs
+      - scripts/patch-needs-check-id.mjs
+      - scripts/fix-needs-check-runtime.mjs
+      - scripts/fix-task-modal-location.mjs
+      - scripts/patch-worker-terminology.mjs
+      - scripts/patch-widget-direct-task.mjs
+      - .github/workflows/apply-needs-check.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Apply patch
+        run: |
+          node scripts/patch-needs-check.mjs
+          node scripts/patch-needs-check-id.mjs
+          node scripts/fix-needs-check-runtime.mjs
+          node scripts/fix-task-modal-location.mjs
+          node scripts/patch-worker-terminology.mjs
+          node scripts/patch-widget-direct-task.mjs
+
+      - name: Commit patched index
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "No index.html changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "feat: open widget tasks directly in detail"
+          git push

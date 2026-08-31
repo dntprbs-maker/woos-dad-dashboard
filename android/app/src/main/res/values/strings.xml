@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">아빠 대시보드</string>
+    <string name="widget_description">확인필요와 미완료 업무를 홈 화면에서 바로 확인합니다.</string>
+</resources>
