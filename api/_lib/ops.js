@@ -105,7 +105,16 @@ export async function getSchemaInfo() {
 export async function listTasks(q = {}) {
   const { map, props } = await fieldMap();
   const limit = Math.min(100, Math.max(1, Number(q.limit) || 25));
-  const filter = buildFilter(q, map, props);
+  const { filter, ignored } = buildFilter(q, map, props);
+
+  // 조건을 못 걸었으면 전체 목록을 조용히 돌려주지 않는다.
+  // 거르라고 했는데 안 걸린 결과를 걸린 것처럼 쓰는 게 제일 위험하다.
+  if (ignored.length) {
+    throw new ApiError(400, "filter_not_supported",
+      "이 DB에 없는 속성으로 걸러 달라고 하셨습니다: " + ignored.join(", ") +
+      ". 조건을 걸지 못했으므로 결과를 돌려주지 않습니다. get_schema로 현재 속성을 확인하세요.");
+  }
+
   const sorts = buildSorts(q.sort, map, props);
 
   const page = await queryPages({

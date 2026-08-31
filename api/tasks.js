@@ -93,7 +93,9 @@ export default async function handler(req, res) {
         description: plain(p["작업내용"]),
         status: plain(p["상태"]),
         priority: plain(p["우선순위"]),
-        worker: plain(p["수행자"]),
+        // 2026-08-30에 DB 속성이 `수행자` → `작업자`로 바뀌었다.
+        // 이름이 바뀌기 전 DB에서도 열리도록 둘 다 본다.
+        worker: plain(p["작업자"]) || plain(p["수행자"]),
         project: plain(p["프로젝트명"]),
         needsCheck: !!plain(p["확인필요"]),
         completedAt: plain(p["완료일시"]),

@@ -40,7 +40,7 @@ Notion 공식 REST API(`api.notion.com/v1`)만 사용하며, Notion MCP의 `quer
 | `statusNot=완료` | 해당 상태 제외 |
 | `q=` | 작업명 부분일치 |
 | `project=` | 프로젝트명 부분일치 |
-| `assignee=` / `priority=` | 수행자 / 우선순위 |
+| `assignee=` / `priority=` | 작업자 / 우선순위 |
 | `completedSince=7d` | 완료일시 >= 7일 전 (`7d` 또는 `2026-08-20`) |
 | `workDateSince=` / `workDateUntil=` | 작업일 범위 |
 | `updatedSince=` | 최종수정 시각 기준 |
@@ -144,7 +144,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 | `description` | 작업내용 |
 | `status` / `priority` | 상태 / 우선순위 |
 | `project` / `projectRef` | 프로젝트명(텍스트) / 프로젝트(관계) |
-| `assignee` / `requester` / `enteredBy` | 수행자 / 의뢰자 / 입력자 |
+| `assignee` / `requester` / `enteredBy` | 작업자 / 의뢰자 / 입력자 |
 | `decision` / `note` / `commit` / `relatedFiles` | 결정사항 / 비고 / Git Commit / 관련파일 |
 | `workDate` / `completedAt` / `duration` | 작업일 / 완료일시 / 작업시간 |
 | `collabType` / `needsCheck` | 협업형태 / 확인필요 |

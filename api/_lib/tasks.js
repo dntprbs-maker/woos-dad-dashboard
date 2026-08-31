@@ -12,7 +12,9 @@ const FIELD_ALIASES = {
   status:       ["상태"],
   priority:     ["우선순위"],
   project:      ["프로젝트명"],
-  assignee:     ["수행자"],
+  // DB 표준 명칭은 `작업자`. 예전 이름 `수행자`는 이름이 바뀌기 전 DB를 위해 남겨 둔다.
+  // 앞쪽이 우선이므로 둘 다 있어도 `작업자`가 선택된다.
+  assignee:     ["작업자", "수행자"],
   requester:    ["의뢰자"],
   enteredBy:    ["입력자"],
   decision:     ["결정사항"],
@@ -226,11 +228,27 @@ function enumClause(propName, schema, raw) {
 /**
  * 조회 조건 -> Notion filter.
  * 전체를 받아와 클라이언트에서 거르지 않고 서버에서 걸러 오도록 하는 것이 목적이다.
+ *
+ * ⚠️ 조건을 못 거는 경우 조용히 무시하지 않는다. `ignored`에 담아 돌려주고
+ *    호출한 쪽이 오류로 처리한다. 2026-08-30에 DB 속성이 `수행자`→`작업자`로
+ *    바뀌었는데 필터가 말없이 건너뛰는 바람에, 작업자로 걸러 달라는 요청에
+ *    전체 목록이 그대로 돌아오는 걸 사흘 동안 아무도 못 알아챘다.
+ *
+ * @returns {{filter: object|undefined, ignored: string[]}}
  */
 export function buildFilter(q, map, props) {
   const and = [];
+  const ignored = [];
 
-  const statusProp = map.status;
+  /** 정규 필드가 이 DB에 없으면 무시하지 말고 기록한다 */
+  const resolve = (field, queryKey) => {
+    const propName = map[field];
+    if (propName && props[propName]) return propName;
+    ignored.push(queryKey + "(" + field + ")");
+    return null;
+  };
+
+  const statusProp = (q.status || q.statusNot || q.open) ? resolve("status", "status") : map.status;
   if (statusProp && props[statusProp]) {
     const s = props[statusProp];
     if (q.status) and.push(enumClause(statusProp, s, q.status));
@@ -246,38 +264,48 @@ export function buildFilter(q, map, props) {
     }
   }
 
-  if (q.q && map.title) {
-    and.push({ property: map.title, title: { contains: String(q.q) } });
+  if (q.q) {
+    const p = resolve("title", "q");
+    if (p) and.push({ property: p, title: { contains: String(q.q) } });
   }
-  if (q.project && map.project && props[map.project]) {
-    and.push({ property: map.project, rich_text: { contains: String(q.project) } });
+  if (q.project) {
+    const p = resolve("project", "project");
+    if (p) and.push({ property: p, rich_text: { contains: String(q.project) } });
   }
-  if (q.assignee && map.assignee && props[map.assignee]) {
-    and.push(enumClause(map.assignee, props[map.assignee], q.assignee));
+  // `작업자`로도 받아 준다 — DB 속성명 그대로 쓰는 호출자가 있다.
+  const assigneeValue = q.assignee ?? q["작업자"];
+  if (assigneeValue) {
+    const p = resolve("assignee", "assignee");
+    if (p) and.push(enumClause(p, props[p], assigneeValue));
   }
-  if (q.priority && map.priority && props[map.priority]) {
-    and.push(enumClause(map.priority, props[map.priority], q.priority));
+  if (q.priority) {
+    const p = resolve("priority", "priority");
+    if (p) and.push(enumClause(p, props[p], q.priority));
   }
 
   const completedSince = normalizeSince(q.completedSince);
-  if (completedSince && map.completedAt && props[map.completedAt]) {
-    and.push({ property: map.completedAt, date: { on_or_after: completedSince } });
+  if (completedSince) {
+    const p = resolve("completedAt", "completedSince");
+    if (p) and.push({ property: p, date: { on_or_after: completedSince } });
   }
   const workDateSince = normalizeSince(q.workDateSince);
-  if (workDateSince && map.workDate && props[map.workDate]) {
-    and.push({ property: map.workDate, date: { on_or_after: workDateSince } });
+  if (workDateSince) {
+    const p = resolve("workDate", "workDateSince");
+    if (p) and.push({ property: p, date: { on_or_after: workDateSince } });
   }
   const workDateUntil = normalizeSince(q.workDateUntil);
-  if (workDateUntil && map.workDate && props[map.workDate]) {
-    and.push({ property: map.workDate, date: { on_or_before: workDateUntil } });
+  if (workDateUntil) {
+    const p = resolve("workDate", "workDateUntil");
+    if (p) and.push({ property: p, date: { on_or_before: workDateUntil } });
   }
   const updatedSince = normalizeSince(q.updatedSince);
   if (updatedSince) {
+    // 최종수정은 DB 속성이 아니라 노션 기본 타임스탬프라 항상 걸 수 있다
     and.push({ timestamp: "last_edited_time", last_edited_time: { on_or_after: updatedSince } });
   }
 
-  if (!and.length) return undefined;
-  return and.length === 1 ? and[0] : { and };
+  const filter = !and.length ? undefined : (and.length === 1 ? and[0] : { and });
+  return { filter, ignored };
 }
 
 // "-완료일시,작업명" 형태를 Notion sorts로
