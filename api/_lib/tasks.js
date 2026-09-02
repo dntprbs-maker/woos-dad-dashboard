@@ -272,6 +272,11 @@ export function buildFilter(q, map, props) {
     const p = resolve("project", "project");
     if (p) and.push({ property: p, rich_text: { contains: String(q.project) } });
   }
+  // 프로젝트 관계로 거르기. 프로젝트 구분의 정본은 텍스트가 아니라 이 관계다.
+  if (q.projectId) {
+    const p = resolve("projectRef", "projectId");
+    if (p) and.push({ property: p, relation: { contains: String(q.projectId) } });
+  }
   // `작업자`로도 받아 준다 — DB 속성명 그대로 쓰는 호출자가 있다.
   const assigneeValue = q.assignee ?? q["작업자"];
   if (assigneeValue) {

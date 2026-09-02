@@ -124,6 +124,40 @@ export async function getSource({ force = false } = {}) {
   return sourceCache;
 }
 
+/* ------------------------------------------------- 작업 DB 밖의 데이터소스 */
+// 프로젝트 원장(📁 프로젝트)처럼 작업 DB가 아닌 데이터소스를 읽고 쓸 때 쓴다.
+// 어떤 데이터소스인지는 환경변수로 따로 받지 않고, 작업 DB의 관계 속성이
+// 가리키는 곳에서 알아낸다(sourceRefFromRelation). 설정이 두 벌로 갈라지지 않는다.
+
+/** 관계 속성의 relation 정보 -> { id, mode, version } */
+export function sourceRefFromRelation(relation) {
+  if (relation?.data_source_id) {
+    return { id: relation.data_source_id, mode: "data_source", version: MODERN_VERSION };
+  }
+  if (relation?.database_id) {
+    return { id: relation.database_id, mode: "database", version: LEGACY_VERSION };
+  }
+  return null;
+}
+
+export async function retrieveSourceMeta(ref) {
+  const path = ref.mode === "database" ? `/databases/${ref.id}` : `/data_sources/${ref.id}`;
+  return call(path, { version: ref.version, retries: 1 });
+}
+
+export async function querySource(ref, { filter, sorts, pageSize = 100, startCursor } = {}) {
+  const body = { page_size: Math.min(100, Math.max(1, pageSize)) };
+  if (filter) body.filter = filter;
+  if (sorts && sorts.length) body.sorts = sorts;
+  if (startCursor) body.start_cursor = startCursor;
+
+  const path = ref.mode === "database"
+    ? `/databases/${ref.id}/query`
+    : `/data_sources/${ref.id}/query`;
+
+  return call(path, { method: "POST", body, version: ref.version });
+}
+
 export async function queryPages({ filter, sorts, pageSize = 100, startCursor } = {}) {
   const src = await getSource();
   const body = { page_size: Math.min(100, Math.max(1, pageSize)) };

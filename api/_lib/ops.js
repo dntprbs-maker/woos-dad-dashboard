@@ -11,6 +11,8 @@ import {
   fieldMap, toTask, buildProperties, buildFilter, buildSorts,
   rankCandidates, decode, DONE_STATUS
 } from "./tasks.js";
+import { ApiError } from "./errors.js";
+import { resolveProjectIdByName } from "./projects.js";
 
 const DEFAULT_THRESHOLD = Number(process.env.TASKS_DUP_THRESHOLD || 0.6);
 const DEFAULT_MAX_SCAN = Number(process.env.TASKS_MAX_SCAN || 300);
@@ -18,16 +20,9 @@ const DEFAULT_DONE_WINDOW_DAYS = 7;
 
 export const UUID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
 
-/** 호출한 쪽이 상태코드로 바꿔 쓸 수 있는 오류 */
-export class ApiError extends Error {
-  constructor(status, code, message, extra) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-    this.extra = extra || {};
-  }
-}
+// ApiError 는 _lib/errors.js 로 옮겼다 (projects.js 와의 순환 참조를 피하려고).
+// 여기서 다시 내보내므로 `import { ApiError } from "./ops.js"` 는 그대로 동작한다.
+export { ApiError };
 
 function blocksFromText(text) {
   return String(text)
@@ -199,6 +194,18 @@ export async function createTask(body = {}) {
     }
   }
 
+  // 프로젝트명만 준 경우 프로젝트 원장에서 같은 이름을 찾아 관계까지 채운다.
+  // 프로젝트 구분의 정본은 관계이고 텍스트는 호환용이라, 새 작업이 관계 없이
+  // 쌓이면 원장에서 영영 안 보이게 된다. 원장을 못 읽어도 생성 자체는 막지 않는다.
+  let linkedProject = null;
+  if (fields.projectRef === undefined && fields.project && map.projectRef && props[map.projectRef]) {
+    const projectId = await resolveProjectIdByName(fields.project);
+    if (projectId) {
+      fields.projectRef = [projectId];
+      linkedProject = { id: projectId, matchedBy: fields.project };
+    }
+  }
+
   const { properties, errors } = buildProperties(fields, map, props);
   if (errors.length) throw new ApiError(400, "invalid_properties", errors.join(" / "));
 
@@ -210,6 +217,7 @@ export async function createTask(body = {}) {
     duplicateCheck: duplicates
       ? { scope: duplicates.scope, threshold: duplicates.threshold, scanned: duplicates.scanned, matches: 0 }
       : { skipped: true },
+    linkedProject,
     task: toTask(page, map)
   };
 }

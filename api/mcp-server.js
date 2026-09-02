@@ -16,8 +16,9 @@ import {
   ApiError, getSchemaInfo, listTasks, searchTasks, createTask, getTask, updateTask, archiveTask
 } from "./_lib/ops.js";
 import { getRules, updateRules } from "./_lib/rules.js";
+import { listProjects, getProject, updateProject, getProjectSchema } from "./_lib/projects.js";
 
-const SERVER_INFO = { name: "woos-tasks", title: "공용 작업관리", version: "1.1.0" };
+const SERVER_INFO = { name: "woos-tasks", title: "공용 작업관리", version: "1.2.0" };
 const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const LATEST_PROTOCOL = SUPPORTED_PROTOCOLS[0];
 
@@ -42,7 +43,15 @@ const INSTRUCTIONS = [
   "",
   "조회는 전부 서버에서 걸린다. 전체를 받아오지 말고 조건을 줘라.",
   "기본 중복검색 범위는 상태!=완료 이고, 최근 완료까지 봐야 하면 scope=both 를 쓴다.",
-  "상태는 대기/진행중/완료/보류, 우선순위는 상/중/하 다."
+  "상태는 대기/진행중/완료/보류, 우선순위는 상/중/하 다.",
+  "",
+  "프로젝트 원장 (Notion `📁 프로젝트` DB):",
+  "- 어떤 프로젝트의 현재 상황을 알아야 하면 작업을 훑지 말고 get_project 를 먼저 부른다.",
+  "  개요·현재상태·주의사항·GitHub·TODO 링크와 미완료 작업, 최근 완료 작업을 한 번에 돌려준다.",
+  "- 프로젝트 구분의 정본은 프로젝트 관계(projectRef)다. 프로젝트명 텍스트는 호환용이다.",
+  "  create_task 에 project(이름)만 줘도 서버가 같은 이름의 프로젝트를 찾아 관계를 자동으로 채운다.",
+  "- 작업을 마감해서 프로젝트 전체 상황이 달라졌으면 update_project 로 `현재상태`도 같이 갱신한다.",
+  "  이 문구가 오래되면 다른 AI가 프로젝트를 잘못 판단한다."
 ].join("\n");
 
 /* -------------------------------------------------------------- 도구 정의 */
@@ -52,7 +61,12 @@ const TASK_FIELD_PROPS = {
   description: { type: "string", description: "작업내용" },
   status: { type: "string", enum: ["대기", "진행중", "완료", "보류"], description: "상태" },
   priority: { type: "string", enum: ["상", "중", "하"], description: "우선순위" },
-  project: { type: "string", description: "프로젝트명" },
+  project: { type: "string", description: "프로젝트명 (텍스트). 생성 시 같은 이름의 프로젝트가 원장에 있으면 관계가 자동으로 연결된다" },
+  projectRef: {
+    type: "array",
+    items: { type: "string" },
+    description: "프로젝트 관계 — 📁 프로젝트 페이지 UUID 배열. 프로젝트 구분의 정본이다. 보통은 project(이름)만 주면 서버가 알아서 채운다"
+  },
   assignee: { type: "string", description: "작업자 (아빠/초롱이/별이/Claude Code/Codex/김영재/사람/기타)" },
   requester: { type: "string", description: "의뢰자" },
   enteredBy: { type: "string", description: "입력자 — 이 작업을 등록한 AI나 사람" },
@@ -105,7 +119,8 @@ const TOOLS = [
         status: { type: "string", description: "쉼표 구분. 예: 진행중,대기" },
         statusNot: { type: "string", description: "쉼표 구분 제외 상태" },
         q: { type: "string", description: "작업명 부분일치" },
-        project: { type: "string", description: "프로젝트명 부분일치" },
+        project: { type: "string", description: "프로젝트명 부분일치 (텍스트)" },
+        projectId: { type: "string", description: "프로젝트 관계로 거르기 — 📁 프로젝트 페이지 UUID. 텍스트보다 이쪽이 정확하다" },
         assignee: { type: "string", description: "작업자" },
         priority: { type: "string", description: "상/중/하" },
         completedSince: { type: "string", description: "완료일시 이후. '7d' 또는 '2026-08-20'" },
@@ -194,6 +209,79 @@ const TOOLS = [
     name: "get_schema",
     title: "DB 스키마 조회",
     description: "대상 작업 DB의 속성 목록과 선택지를 본다. 어떤 값을 넣을 수 있는지 확인할 때.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  // ── 프로젝트 원장 (📁 프로젝트 DB) ──────────────────────────────────────
+  {
+    name: "list_projects",
+    title: "프로젝트 목록",
+    description:
+      "프로젝트 원장의 목록을 본다. 어떤 프로젝트가 있는지, 각각 어떤 상태인지 한눈에 볼 때. " +
+      "상태는 진행중/보류/자동화완료/관리대상 아님.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "쉼표 구분. 예: 진행중,보류" },
+        q: { type: "string", description: "프로젝트명 부분일치" },
+        limit: { type: "integer", description: "기본 50, 최대 100" },
+        cursor: { type: "string", description: "다음 페이지 커서" }
+      }
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "get_project",
+    title: "프로젝트 현황 한 번에 보기",
+    description:
+      "프로젝트 한 건의 개요·현재상태·주의사항·GitHub·TODO 링크와 함께 " +
+      "그 프로젝트의 미완료 작업과 최근 완료 작업을 한 번에 돌려준다. " +
+      "특정 프로젝트가 지금 어떤 상황인지 알아야 할 때는 작업 목록을 훑지 말고 이걸 먼저 부를 것.",
+    inputSchema: {
+      type: "object",
+      required: ["project"],
+      properties: {
+        project: { type: "string", description: "프로젝트명 또는 프로젝트 페이지 UUID" },
+        openLimit: { type: "integer", description: "미완료 작업 최대 건수 (기본 30)" },
+        doneLimit: { type: "integer", description: "최근 완료 작업 최대 건수 (기본 10)" },
+        doneWithinDays: { type: "integer", description: "최근 완료를 며칠까지 볼지 (기본 30)" },
+        blocks: { type: "boolean", description: "프로젝트 페이지 본문까지 가져올지" }
+      }
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "update_project",
+    title: "프로젝트 원장 갱신",
+    description:
+      "프로젝트의 현재상태·개요·주의사항 등을 갱신한다. " +
+      "작업을 마감해서 프로젝트 전체 상황이 달라졌으면 여기까지 갱신할 것. " +
+      "현재상태 문구가 오래되면 다른 AI가 그 프로젝트를 잘못 판단한다.",
+    inputSchema: {
+      type: "object",
+      required: ["project"],
+      properties: {
+        project: { type: "string", description: "프로젝트명 또는 프로젝트 페이지 UUID" },
+        currentState: { type: "string", description: "현재상태 — 지금 이 프로젝트가 어디까지 와 있는지" },
+        overview: { type: "string", description: "개요" },
+        caution: { type: "string", description: "주의사항" },
+        summary: { type: "string", description: "한줄소개" },
+        status: {
+          type: "string",
+          enum: ["진행중", "보류", "자동화완료", "관리대상 아님"],
+          description: "프로젝트 상태"
+        },
+        github: { type: "string", description: "GitHub 주소" },
+        todo: { type: "string", description: "TODO 링크" },
+        stampDate: { type: "boolean", description: "true면 현재상태 끝에 오늘 날짜를 붙인다" }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  },
+  {
+    name: "get_project_schema",
+    title: "프로젝트 DB 스키마 조회",
+    description: "프로젝트 원장 DB의 속성 목록과 선택지를 본다. 어떤 값을 넣을 수 있는지 확인할 때.",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true, openWorldHint: true }
   },
@@ -303,6 +391,20 @@ async function runTool(name, args = {}) {
       return archiveTask(args.id);
     }
     case "get_schema": return getSchemaInfo();
+
+    case "list_projects": return listProjects(args);
+    case "get_project":
+      return getProject(args.project, {
+        openLimit: args.openLimit,
+        doneLimit: args.doneLimit,
+        doneWithinDays: args.doneWithinDays,
+        blocks: args.blocks === true
+      });
+    case "update_project": {
+      const { project, ...rest } = args;
+      return updateProject(project, rest);
+    }
+    case "get_project_schema": return getProjectSchema();
 
     case "get_notion_rules": return getRules();
     case "update_notion_rules":

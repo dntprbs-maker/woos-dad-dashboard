@@ -9,6 +9,10 @@
 //   GET    /api/v1/tasks/{id}         단건 조회
 //   PATCH  /api/v1/tasks/{id}         기존 작업 수정
 //   DELETE /api/v1/tasks/{id}?confirm=true   보관(휴지통) 처리
+//   GET    /api/v1/projects           프로젝트 원장 목록
+//   GET    /api/v1/projects/schema    프로젝트 DB 속성·선택지
+//   GET    /api/v1/projects/{이름|id} 프로젝트 현황 (개요 + 미완료·최근완료 작업)
+//   PATCH  /api/v1/projects/{이름|id} 프로젝트 현재상태 등 갱신
 //
 // 특정 AI에 종속되지 않는 순수 HTTP+JSON 인터페이스다.
 // 실제 동작은 _lib/ops.js 에 있고 MCP 서버(api/mcp-server.js)도 같은 것을 쓴다.
@@ -22,6 +26,7 @@ import {
   getSchemaInfo, listTasks, searchTasks, createTask, getTask, updateTask, archiveTask
 } from "../_lib/ops.js";
 import { getRules, updateRules } from "../_lib/rules.js";
+import { listProjects, getProject, updateProject, getProjectSchema } from "../_lib/projects.js";
 import { openapi } from "../_lib/openapi.js";
 
 // 알려진 한계: 노션 쿼리 인덱스는 즉시 일관되지 않는다. 실측하면 방금 만든 페이지가
@@ -99,6 +104,45 @@ export default async function handler(req, res) {
       }
       fail(res, 405, "method_not_allowed", "GET 또는 PATCH만 됩니다", rid);
       return done(405);
+    }
+
+    // 프로젝트 원장 — MCP의 list_projects / get_project / update_project 와 같은 코드
+    if (segments[0] === "projects") {
+      const rest = segments.slice(1);
+
+      if (rest.length === 0) {
+        if (req.method !== "GET") {
+          // 프로젝트 신설은 이 API로 하지 않는다. 노션에서 사람이 만든다.
+          fail(res, 405, "method_not_allowed", "GET만 됩니다", rid);
+          return done(405);
+        }
+        send(res, 200, await listProjects(paramsToObject(params)), rid);
+        return done(200);
+      }
+
+      if (rest.length === 1 && rest[0] === "schema" && req.method === "GET") {
+        send(res, 200, await getProjectSchema(), rid);
+        return done(200);
+      }
+
+      if (rest.length === 1) {
+        const key = rest[0];
+        if (req.method === "GET") {
+          send(res, 200, await getProject(key, {
+            openLimit: params.get("openLimit"),
+            doneLimit: params.get("doneLimit"),
+            doneWithinDays: params.get("doneWithinDays"),
+            blocks: params.get("blocks") === "true"
+          }), rid);
+          return done(200);
+        }
+        if (req.method === "PATCH") {
+          send(res, 200, await updateProject(key, await readJson(req)), rid);
+          return done(200);
+        }
+        fail(res, 405, "method_not_allowed", "GET 또는 PATCH만 됩니다", rid);
+        return done(405);
+      }
     }
 
     if (segments[0] === "tasks") {

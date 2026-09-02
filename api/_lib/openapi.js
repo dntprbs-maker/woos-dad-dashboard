@@ -41,7 +41,12 @@ const TASK_FIELDS = {
   description: { type: "string", description: "작업내용" },
   status: { type: "string", description: "대기 / 진행중 / 완료 / 보류" },
   priority: { type: "string", description: "상 / 중 / 하" },
-  project: { type: "string", description: "프로젝트명" },
+  project: { type: "string", description: "프로젝트명 (텍스트). 생성 시 같은 이름이 원장에 있으면 프로젝트 관계가 자동으로 연결된다" },
+  projectRef: {
+    type: "array",
+    items: { type: "string" },
+    description: "프로젝트 관계 — 📁 프로젝트 페이지 UUID 배열. 프로젝트 구분의 정본"
+  },
   assignee: { type: "string", description: "작업자" },
   requester: { type: "string", description: "의뢰자" },
   enteredBy: { type: "string", description: "입력자 — 이 작업을 등록한 AI/사람" },
@@ -54,6 +59,24 @@ const TASK_FIELDS = {
   duration: { type: "string", description: "작업시간" },
   collabType: { type: "string", description: "단독 작업 / 공동 작업" },
   needsCheck: { type: "boolean", description: "확인필요" }
+};
+
+const PROJECT = {
+  type: "object",
+  description: "프로젝트 원장 한 건 (Notion 📁 프로젝트 DB)",
+  properties: {
+    id: { type: "string", description: "Notion 페이지 UUID" },
+    url: { type: "string" },
+    name: { type: "string", description: "프로젝트명" },
+    status: { type: "string", nullable: true, description: "진행중 / 보류 / 자동화완료 / 관리대상 아님" },
+    summary: { type: "string", nullable: true, description: "한줄소개" },
+    overview: { type: "string", nullable: true, description: "개요" },
+    currentState: { type: "string", nullable: true, description: "현재상태" },
+    caution: { type: "string", nullable: true, description: "주의사항" },
+    github: { type: "string", nullable: true },
+    todo: { type: "string", nullable: true, description: "TODO 링크" },
+    last_edited_time: { type: "string" }
+  }
 };
 
 export function openapi(req) {
@@ -75,6 +98,7 @@ export function openapi(req) {
       },
       schemas: {
         Task: TASK,
+        Project: PROJECT,
         Error: {
           type: "object",
           properties: {
@@ -96,7 +120,8 @@ export function openapi(req) {
             { name: "status", in: "query", schema: { type: "string" }, description: "쉼표 구분. 예: 진행중,대기" },
             { name: "statusNot", in: "query", schema: { type: "string" }, description: "쉼표 구분 제외 상태" },
             { name: "q", in: "query", schema: { type: "string" }, description: "작업명 부분일치" },
-            { name: "project", in: "query", schema: { type: "string" }, description: "프로젝트명 부분일치" },
+            { name: "project", in: "query", schema: { type: "string" }, description: "프로젝트명 부분일치 (텍스트)" },
+            { name: "projectId", in: "query", schema: { type: "string" }, description: "프로젝트 관계로 거르기 — 📁 프로젝트 페이지 UUID" },
             { name: "assignee", in: "query", schema: { type: "string" }, description: "작업자" },
             { name: "priority", in: "query", schema: { type: "string" }, description: "상/중/하" },
             { name: "completedSince", in: "query", schema: { type: "string" }, description: "완료일시 >= 값. '7d' 또는 날짜" },
@@ -238,6 +263,79 @@ export function openapi(req) {
           summary: "작업 보관 (노션 휴지통으로. 복구 가능)",
           parameters: [{ name: "confirm", in: "query", required: true, schema: { type: "string", enum: ["true"] } }],
           responses: { 200: { description: "보관됨" } }
+        }
+      },
+      "/projects": {
+        get: {
+          operationId: "listProjects",
+          summary: "프로젝트 원장 목록 (어떤 프로젝트가 있고 각각 어떤 상태인지)",
+          parameters: [
+            { name: "status", in: "query", schema: { type: "string" }, description: "쉼표 구분. 진행중/보류/자동화완료/관리대상 아님" },
+            { name: "q", in: "query", schema: { type: "string" }, description: "프로젝트명 부분일치" },
+            { name: "limit", in: "query", schema: { type: "integer", default: 50, maximum: 100 } },
+            { name: "cursor", in: "query", schema: { type: "string" } }
+          ],
+          responses: { 200: { description: "프로젝트 목록", content: { "application/json": { schema: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean" },
+              count: { type: "integer" },
+              projects: { type: "array", items: PROJECT }
+            }
+          } } } } }
+        }
+      },
+      "/projects/schema": {
+        get: {
+          operationId: "getProjectSchema",
+          summary: "프로젝트 원장 DB의 속성 목록과 선택지",
+          responses: { 200: { description: "스키마" } }
+        }
+      },
+      "/projects/{project}": {
+        parameters: [{
+          name: "project", in: "path", required: true, schema: { type: "string" },
+          description: "프로젝트명 또는 프로젝트 페이지 UUID"
+        }],
+        get: {
+          operationId: "getProject",
+          summary: "프로젝트 현황을 한 번에 (개요·현재상태·주의사항 + 미완료 작업 + 최근 완료 작업)",
+          parameters: [
+            { name: "openLimit", in: "query", schema: { type: "integer", default: 30 } },
+            { name: "doneLimit", in: "query", schema: { type: "integer", default: 10 } },
+            { name: "doneWithinDays", in: "query", schema: { type: "integer", default: 30 } },
+            { name: "blocks", in: "query", schema: { type: "boolean" }, description: "true면 프로젝트 페이지 본문도" }
+          ],
+          responses: { 200: { description: "프로젝트 현황", content: { "application/json": { schema: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean" },
+              project: PROJECT,
+              openTasks: { type: "array", items: TASK },
+              recentlyDone: { type: "array", items: TASK }
+            }
+          } } } } }
+        },
+        patch: {
+          operationId: "updateProject",
+          summary: "프로젝트 현재상태 등 갱신 (작업 마감 시 함께 갱신할 것)",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: {
+              type: "object",
+              properties: {
+                currentState: { type: "string", description: "현재상태" },
+                overview: { type: "string", description: "개요" },
+                caution: { type: "string", description: "주의사항" },
+                summary: { type: "string", description: "한줄소개" },
+                status: { type: "string", description: "진행중 / 보류 / 자동화완료 / 관리대상 아님" },
+                github: { type: "string" },
+                todo: { type: "string", description: "TODO 링크" },
+                stampDate: { type: "boolean", description: "true면 현재상태 끝에 오늘 날짜를 붙인다" }
+              }
+            } } }
+          },
+          responses: { 200: { description: "수정됨" } }
         }
       },
       "/schema": {

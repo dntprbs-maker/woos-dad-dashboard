@@ -30,6 +30,10 @@ Notion 공식 REST API(`api.notion.com/v1`)만 사용하며, Notion MCP의 `quer
 | GET | `/tasks/{id}` | 단건 조회 (`?blocks=true`면 본문까지) |
 | PATCH | `/tasks/{id}` | 기존 작업 수정 |
 | DELETE | `/tasks/{id}?confirm=true` | 보관 (노션 휴지통, 복구 가능) |
+| GET | `/projects` | 프로젝트 원장 목록 |
+| GET | `/projects/schema` | 프로젝트 DB 속성·선택지 |
+| GET | `/projects/{이름\|id}` | 프로젝트 현황 (개요 + 미완료·최근완료 작업) |
+| PATCH | `/projects/{이름\|id}` | 프로젝트 현재상태 등 갱신 |
 
 ### GET /tasks — 조건 조회
 
@@ -39,7 +43,8 @@ Notion 공식 REST API(`api.notion.com/v1`)만 사용하며, Notion MCP의 `quer
 | `status=진행중,대기` | 해당 상태만 |
 | `statusNot=완료` | 해당 상태 제외 |
 | `q=` | 작업명 부분일치 |
-| `project=` | 프로젝트명 부분일치 |
+| `project=` | 프로젝트명 부분일치 (텍스트) |
+| `projectId=` | 프로젝트 **관계**로 거르기 — 📁 프로젝트 페이지 UUID. 텍스트보다 정확하다 |
 | `assignee=` / `priority=` | 작업자 / 우선순위 |
 | `completedSince=7d` | 완료일시 >= 7일 전 (`7d` 또는 `2026-08-20`) |
 | `workDateSince=` / `workDateUntil=` | 작업일 범위 |
@@ -133,6 +138,69 @@ curl -H "Authorization: Bearer $TASKS_API_KEY" \
 - `appendTo`를 빼면 페이지 **본문 블록**으로 기록됩니다.
 - `complete: true`: `상태=완료` + `완료일시=현재시각` 한 번에.
 
+## 프로젝트 원장 (📁 프로젝트 DB)
+
+작업 하나하나가 아니라 **프로젝트 단위의 현재 상황**을 보는 자리입니다.
+새 DB를 만들지 않았습니다. 노션에 이미 있던 「📁 프로젝트」 DB가 원장 정본이고,
+이 API는 그것을 REST·MCP로 열어 줄 뿐입니다.
+
+```bash
+curl -H "Authorization: Bearer $TASKS_API_KEY" \
+  "https://woos-dad-dashboard.vercel.app/api/v1/projects/kbo-toto-auto"
+```
+
+한 번의 호출로 이것들이 함께 옵니다.
+
+- 프로젝트의 `개요` · `현재상태` · `주의사항` · `GitHub` · `TODO 링크` · `상태`
+- 그 프로젝트의 **미완료 작업** (기본 30건)
+- **최근 완료 작업** (기본 최근 30일 10건)
+
+작업은 「📁 프로젝트」의 `연결 작업` 관계가 아니라 **현행 작업 DB를 직접** 조회합니다.
+그 관계는 아직 옛 「📋 작업 관리」 DB를 가리키고 있어서, 지금 것을 보여주지 못합니다.
+프로젝트 관계로 연결된 작업과 프로젝트명 텍스트가 일치하는 작업을 함께 잡습니다
+(마이그레이션 전후가 섞여 있어서).
+
+### 대상 DB를 어떻게 찾는가
+
+환경변수를 따로 두지 않습니다. 작업 DB의 `프로젝트` 관계 속성이 가리키는 데이터소스를
+그대로 따라갑니다. 설정이 두 벌로 갈라져 서로 어긋나는 일이 생기지 않습니다.
+
+> ⚠️ **Integration 연결이 필요합니다.** 노션은 Integration이 볼 수 없는 DB를 가리키는
+> 관계 속성을 응답에서 **통째로 빼버립니다**. 「📁 프로젝트」와 「👥 직원·에이전트」 DB에
+> 이 Integration이 연결돼 있지 않으면 `프로젝트`·`담당자`·`참여자` 속성이 아예 안 보이고,
+> 작업의 프로젝트 값도 빈 배열로 나옵니다. 연결은 노션 화면에서만 할 수 있습니다
+> (DB → `···` → 연결). 이 상태면 `503 project_relation_unavailable` 로 알려줍니다.
+
+### 프로젝트 구분의 정본은 관계다
+
+`프로젝트명`(텍스트)이 아니라 `프로젝트`(관계)가 정본입니다. 텍스트는 호환용으로 남겨 둡니다.
+
+- `POST /tasks` 에 `project`(이름)만 줘도 서버가 같은 이름의 프로젝트를 찾아
+  관계를 자동으로 채웁니다. 응답의 `linkedProject` 로 무엇에 연결됐는지 알려줍니다.
+- 원장을 읽지 못하는 상황이어도 작업 생성 자체는 막지 않습니다(관계만 비게 됩니다).
+- 직접 지정하려면 `projectRef: ["<프로젝트 페이지 UUID>"]`.
+
+### 현재상태는 작업 마감 때 같이 갱신한다
+
+```bash
+curl -X PATCH -H "Authorization: Bearer $TASKS_API_KEY" -H "Content-Type: application/json" \
+  -d '{"currentState":"7단계 Production 검증까지 완료","stampDate":true}' \
+  "https://woos-dad-dashboard.vercel.app/api/v1/projects/kbo-toto-auto"
+```
+
+이 문구가 오래되면 다른 AI가 프로젝트 상황을 잘못 판단합니다. 실제로 `kbo-toto-auto` 의
+현재상태는 갱신 수단이 없어서 2026-08-22 시점에 멈춰 있었습니다.
+
+### 알려진 한계 — 노션 검색 인덱스가 실제 값과 어긋나는 경우
+
+노션의 쿼리 인덱스가 페이지 실제 값과 다를 때가 있습니다. 실측(2026-09-03)으로,
+2026-08-31에 상태를 `완료`로 바꾼 작업 8건이 인덱스에는 아직 `대기`로 남아 있어
+미완료 조건에 걸려 나왔습니다. 0.5초짜리 지연이 아니라 **사흘이 지나도 그대로**였습니다.
+
+`GET /projects/{이름}` 은 이 경우 페이지의 실제 값을 정본으로 보고 미완료 목록에서 빼되,
+`indexMismatch` 에 담아 함께 알려줍니다. 조용히 감추지 않습니다.
+노션에서 해당 작업의 상태를 한 번 다시 저장하면 인덱스가 맞춰집니다.
+
 ## 스키마 자동 매핑
 
 DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 읽어 정규 필드명을 실제 속성명에
@@ -186,7 +254,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 헤더 쪽을 쓰세요.** 경로 방식을 쓴다면 그 URL 자체가 비밀번호라고 생각하고 다루고,
 새어 나갔다 싶으면 `TASKS_API_KEY`에서 그 라벨만 빼고 재배포하면 즉시 끊깁니다.
 
-### 도구 9개
+### 도구 15개
 
 | 도구 | 하는 일 |
 |---|---|
@@ -197,6 +265,11 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 | `update_task` | 수정 (`appendProgress`, `complete`) |
 | `archive_task` | 보관 (`confirm=true` 필요) |
 | `get_schema` | DB 속성·선택지 조회 |
+| `list_projects` | 프로젝트 원장 목록 |
+| `get_project` | **프로젝트 현황을 한 번에** — 개요·현재상태·주의사항 + 미완료·최근완료 작업 |
+| `update_project` | 프로젝트 현재상태 갱신 |
+| `get_project_schema` | 프로젝트 DB 속성·선택지 조회 |
+| `get_notion_rules` / `update_notion_rules` | 노션 운영규칙 읽기·쓰기 |
 | `search` / `fetch` | ChatGPT 딥리서치 커넥터가 기대하는 이름의 검색·조회 쌍 |
 
 `initialize` 응답의 `instructions`에 운영 규칙(생성 전 검색, 중복이면 갱신, 거절당하면 force 금지)이
