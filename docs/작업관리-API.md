@@ -41,6 +41,48 @@ Notion 공식 REST API(`api.notion.com/v1`)만 사용하며, Notion MCP의 `quer
 | GET | `/messages/{id}` | 단건 조회 (본문 포함) |
 | PATCH | `/messages/{id}` | 수정·읽음 처리 |
 | DELETE | `/messages/{id}?confirm=true` | 보관 (노션 휴지통, 복구 가능) |
+| GET | `/agent-status` | 전체 AI 실행상태 (heartbeat 나이 포함) |
+| GET | `/agent-status/schema` | 실행상태 DB 속성·선택지 |
+| GET | `/agent-status/{ai}` | AI 한 개의 실행상태 |
+| POST | `/agent-status` | 상태 갱신이자 heartbeat (없으면 생성) |
+
+## AI 실행상태 + heartbeat
+
+AI 메신저의 `새메시지/확인/처리완료`와는 완전히 별개 체계다. 저건 "메시지를 읽었는지"를,
+이건 "그 AI 프로세스가 지금 살아서 움직이고 있는지"를 나타낸다. Notion `🫀 AI 실행상태` DB
+(작업 DB와 무관한 새 DB, `노션 운영규칙` 페이지 아래에 이 Integration이 직접 만들어서
+별도 연결 없이 바로 접근 가능하다)를 원본으로 쓴다.
+
+AI 하나당 페이지 한 장(싱글턴)이다. 필드: `AI이름`(title), `실행상태`(대기/작업중/완료/오류·중단),
+`현재작업명`, `작업시작시간`, `마지막활동시간`, `종료시각`, `세션ID`, `PID`, `메모`.
+
+**타임스탬프 세 개(`작업시작시간`/`마지막활동시간`/`종료시각`)는 Notion `date` 타입이 아니라
+`rich_text`에 ISO8601 문자열로 저장한다.** Notion의 date 속성은 분 단위까지만 저장하고
+초 이하를 반올림해서 버린다(실측 확인함) — heartbeat 주기가 10~20초인데 60초 임계값과
+맞먹는 오차가 생겨 판정을 신뢰할 수 없다. rich_text + 문자열 파싱으로 밀리초 정밀도를 유지한다.
+대신 Notion UI에서 달력 위젯 대신 텍스트로 보인다.
+
+```bash
+# heartbeat이자 상태 갱신. 호출마다 마지막활동시간이 서버 시각으로 찍힌다.
+curl -X POST -H "Authorization: Bearer $TASKS_API_KEY" -H "Content-Type: application/json" \
+  -d '{"ai":"Claude Code","status":"작업중","taskName":"작업명","sessionId":"...","pid":"..."}' \
+  "https://woos-dad-dashboard.vercel.app/api/v1/agent-status"
+
+# 순수 heartbeat (status 생략, 이미 기록이 있어야 함)
+curl -X POST -H "Authorization: Bearer $TASKS_API_KEY" -H "Content-Type: application/json" \
+  -d '{"ai":"Claude Code"}' "https://woos-dad-dashboard.vercel.app/api/v1/agent-status"
+
+curl -H "Authorization: Bearer $TASKS_API_KEY" \
+  "https://woos-dad-dashboard.vercel.app/api/v1/agent-status/Claude%20Code"
+```
+
+응답에는 `lastActivityAgeSeconds`(마지막 활동 이후 경과 초), `stale`(임계값 초과 여부, 기본 60초 —
+`AGENT_STATUS_STALE_SECONDS` 환경변수로 조정), `suspectedHung`(실행상태=작업중인데 stale이면 true),
+`judgedLabel`(사람이 읽을 문구)이 항상 같이 온다. **실행상태 값만 보고 판단하지 말 것** — 크래시로
+상태를 못 바꾸고 죽어도 마지막활동시간 갱신이 멈추므로, 정지 여부는 나이로만 걸러진다.
+
+`status=작업중`으로 처음(또는 대기/완료/오류·중단 이후 다시) 들어가면 작업시작시간을 자동으로
+지금으로 찍는다. `status`가 대기/완료/오류·중단이면 종료시각을 자동으로 찍는다.
 
 ### GET /tasks — 조건 조회
 
@@ -295,6 +337,8 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 | `NOTION_TOKEN` | ✅ | Notion Integration Secret |
 | `NOTION_DATA_SOURCE_ID` | ✅ | 대상 DB. database id / data source id 둘 다 인식 (`NOTION_DATABASE_ID`로도 인식) |
 | `NOTION_MESSENGER_DATA_SOURCE_ID` | | AI 공용 대화방 DB. 없으면 대화방 도구만 503으로 막히고 나머지는 정상 동작 |
+| `AGENT_STATUS_DATA_SOURCE_ID` | | AI 실행상태(heartbeat) DB. 없으면 agent-status 도구만 503으로 막히고 나머지는 정상 동작 |
+| `AGENT_STATUS_STALE_SECONDS` | | 정지 의심 판정 임계값(초). 기본 60 |
 | `TASKS_API_KEY` | ✅ | 이 API의 인증키. 16자 이상. `라벨:비밀값` 쉼표 나열 가능 |
 | `TASKS_DUP_THRESHOLD` | | 중복 판정 임계값 (기본 0.6) |
 | `TASKS_MAX_SCAN` | | 유사검색이 훑는 최대 건수 (기본 300) |
@@ -322,7 +366,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 헤더 쪽을 쓰세요.** 경로 방식을 쓴다면 그 URL 자체가 비밀번호라고 생각하고 다루고,
 새어 나갔다 싶으면 `TASKS_API_KEY`에서 그 라벨만 빼고 재배포하면 즉시 끊깁니다.
 
-### 도구 23개
+### 도구 27개
 
 | 도구 | 하는 일 |
 |---|---|
@@ -344,6 +388,10 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 | `update_message` / `mark_messages` | 읽음 처리·수정 / 여러 건 일괄 |
 | `archive_message` | 보관 (`confirm=true` 필요) |
 | `get_messenger_schema` | 대화방 DB 속성·선택지 조회 |
+| `get_agent_status` | AI 하나의 실행상태 — "지금 작업중이야? 마지막 활동 몇 초 전이야?" |
+| `list_agent_status` | 전체 AI 실행상태 목록 |
+| `update_agent_status` | 실행상태 갱신이자 heartbeat |
+| `get_agent_status_schema` | 실행상태 DB 속성·선택지 조회 |
 | `search` / `fetch` | ChatGPT 딥리서치 커넥터가 기대하는 이름의 검색·조회 쌍 |
 
 `initialize` 응답의 `instructions`에 운영 규칙(생성 전 검색, 중복이면 갱신, 거절당하면 force 금지)이
@@ -362,7 +410,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
      그리고 `Authorization: Bearer <chatgpt 라벨 키>`
    - 헤더 칸이 없으면 → `https://woos-dad-dashboard.vercel.app/api/mcp/<chatgpt 라벨 키>`
      인증은 **없음(None)** 으로 둡니다
-4. 도구 목록에 위 23개가 뜨면 연결된 것입니다
+4. 도구 목록에 위 27개가 뜨면 연결된 것입니다
 
 > ChatGPT의 커넥터 화면은 플랜과 버전에 따라 위치와 항목 이름이 달라집니다.
 > 인증 방식으로 OAuth만 제공하고 커스텀 헤더 칸이 없는 경우가 있어, 그래서 경로에 키를 넣는

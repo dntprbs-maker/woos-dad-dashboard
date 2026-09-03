@@ -22,8 +22,11 @@ import {
   updateMessage, markMessages, archiveMessage, getMessengerSchema,
   STATUS_NEW, STATUS_SEEN, STATUS_DONE
 } from "./_lib/messages.js";
+import {
+  getAgentStatus, listAgentStatus, upsertAgentStatus, getAgentStatusSchema, STATES as AGENT_STATES
+} from "./_lib/agentStatus.js";
 
-const SERVER_INFO = { name: "woos-tasks", title: "공용 작업관리", version: "1.3.0" };
+const SERVER_INFO = { name: "woos-tasks", title: "공용 작업관리", version: "1.4.0" };
 const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const LATEST_PROTOCOL = SUPPORTED_PROTOCOLS[0];
 
@@ -72,7 +75,13 @@ const INSTRUCTIONS = [
   "- send_message 는 발신자·수신자·제목·내용이 하나라도 비면 등록을 거절한다.",
   "  내용을 본문에만 적는 것은 등록이 아니다.",
   "- check_messages 결과에 malformed 가 있으면 규칙을 어기고 등록된 메시지다.",
-  "  본문을 읽어 내 것인지 판단하고, 남의 것이면 손대지 말고 보낸 쪽에 알린다."
+  "  본문을 읽어 내 것인지 판단하고, 남의 것이면 손대지 말고 보낸 쪽에 알린다.",
+  "",
+  "AI 실행상태 + heartbeat (AI 메신저와 별개 체계):",
+  "- 'Claude Code 지금 작업 중이야?' 같은 질문은 get_agent_status(ai=\"Claude Code\")로 확인한다.",
+  "  실행상태 값만 보지 말고 lastActivityAgeSeconds/stale/suspectedHung 을 함께 본다 —",
+  "  60초(기본)가 넘으면 상태가 작업중이어도 정지·응답없음 의심으로 본다.",
+  "- 여러 AI를 한 번에 보려면 list_agent_status."
 ].join("\n");
 
 /* -------------------------------------------------------------- 도구 정의 */
@@ -484,6 +493,66 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true, openWorldHint: true }
   },
+  // ── AI 실행상태 + heartbeat (AI 메신저의 새메시지/확인 과는 별개 체계) ──
+  {
+    name: "get_agent_status",
+    title: "AI 실행상태 조회 (heartbeat 나이 포함)",
+    description:
+      "특정 AI(예: Claude Code)가 지금 작업중/대기/완료/오류중단 중 무엇인지, " +
+      "마지막 활동이 몇 초 전인지 한 번에 돌려준다. " +
+      "'지금 작업 중이야? 마지막 활동 몇 초 전이야?' 류의 질문에 이걸 쓴다. " +
+      "실행상태 값만 믿지 말고 lastActivityAgeSeconds/stale/suspectedHung 을 함께 볼 것 — " +
+      "마지막 활동이 임계값(기본 60초)을 넘으면 상태가 작업중이어도 정지·응답없음 의심이다.",
+    inputSchema: {
+      type: "object",
+      required: ["ai"],
+      properties: {
+        ai: { type: "string", description: "AI 이름. 예: 'Claude Code'" },
+        staleSeconds: { type: "integer", description: "정지 의심 판정 임계값(초). 기본 60" }
+      }
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "list_agent_status",
+    title: "전체 AI 실행상태 목록",
+    description: "등록된 모든 AI의 실행상태를 heartbeat 나이와 함께 한 번에 본다.",
+    inputSchema: {
+      type: "object",
+      properties: { staleSeconds: { type: "integer", description: "정지 의심 판정 임계값(초). 기본 60" } }
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "update_agent_status",
+    title: "AI 실행상태 갱신 / heartbeat",
+    description:
+      "AI 실행상태를 갱신한다. 호출할 때마다 마지막활동시간이 서버 시각으로 찍히므로 " +
+      "이것 자체가 heartbeat다. status 없이 ai만 주면 순수 heartbeat(마지막활동시간만 갱신)이고, " +
+      "기존 기록이 전혀 없는 첫 호출에는 status가 있어야 한다. " +
+      "status=작업중으로 새로 들어가면 작업시작시간을 자동으로 지금으로 찍는다(이미 작업중이면 안 건드림). " +
+      "status가 대기/완료/오류·중단이면 종료시각을 자동으로 지금으로 찍는다.",
+    inputSchema: {
+      type: "object",
+      required: ["ai"],
+      properties: {
+        ai: { type: "string", description: "AI 이름. 예: 'Claude Code'" },
+        status: { type: "string", enum: AGENT_STATES, description: "실행상태" },
+        taskName: { type: "string", description: "현재 작업명" },
+        sessionId: { type: "string", description: "실행 세션 식별자" },
+        pid: { type: "string", description: "프로세스 PID" },
+        note: { type: "string", description: "비고 (오류 메시지 등)" }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  },
+  {
+    name: "get_agent_status_schema",
+    title: "AI 실행상태 DB 스키마 조회",
+    description: "AI 실행상태 DB의 속성·선택지·임계값을 본다.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
   // ── ChatGPT 딥리서치 커넥터가 기대하는 이름 (search / fetch) ────────────
   {
     name: "search",
@@ -581,6 +650,11 @@ async function runTool(name, args = {}) {
       return archiveMessage(args.id);
     }
     case "get_messenger_schema": return getMessengerSchema();
+
+    case "get_agent_status": return getAgentStatus(args.ai, { staleSeconds: args.staleSeconds });
+    case "list_agent_status": return listAgentStatus({ staleSeconds: args.staleSeconds });
+    case "update_agent_status": return upsertAgentStatus(args);
+    case "get_agent_status_schema": return getAgentStatusSchema();
 
     case "get_notion_rules": return getRules();
     case "update_notion_rules":

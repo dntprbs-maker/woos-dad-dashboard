@@ -20,6 +20,10 @@
 //   GET    /api/v1/messages/{id}      단건 조회
 //   PATCH  /api/v1/messages/{id}      수정·읽음 처리
 //   DELETE /api/v1/messages/{id}?confirm=true  보관(휴지통) 처리
+//   GET    /api/v1/agent-status           전체 AI 실행상태 (heartbeat 나이 포함)
+//   GET    /api/v1/agent-status/schema    실행상태 DB 속성·선택지
+//   GET    /api/v1/agent-status/{ai}      AI 한 개의 실행상태
+//   POST   /api/v1/agent-status           상태 갱신이자 heartbeat (없으면 생성)
 //
 // 특정 AI에 종속되지 않는 순수 HTTP+JSON 인터페이스다.
 // 실제 동작은 _lib/ops.js 에 있고 MCP 서버(api/mcp-server.js)도 같은 것을 쓴다.
@@ -38,6 +42,9 @@ import {
   checkMessages, listMessages, getMessage, sendMessage,
   updateMessage, archiveMessage, getMessengerSchema
 } from "../_lib/messages.js";
+import {
+  getAgentStatus, listAgentStatus, upsertAgentStatus, getAgentStatusSchema
+} from "../_lib/agentStatus.js";
 import { openapi } from "../_lib/openapi.js";
 
 // 알려진 한계: 노션 쿼리 인덱스는 즉시 일관되지 않는다. 실측하면 방금 만든 페이지가
@@ -209,6 +216,38 @@ export default async function handler(req, res) {
         }
         fail(res, 405, "method_not_allowed", "GET, PATCH, DELETE만 됩니다", rid);
         return done(405);
+      }
+    }
+
+    // AI 실행상태 + heartbeat — MCP의 get_agent_status / update_agent_status 와 같은 코드
+    if (segments[0] === "agent-status") {
+      const rest = segments.slice(1);
+
+      if (rest.length === 0) {
+        if (req.method === "GET") {
+          send(res, 200, await listAgentStatus(paramsToObject(params)), rid);
+          return done(200);
+        }
+        if (req.method === "POST") {
+          send(res, 200, await upsertAgentStatus(await readJson(req)), rid);
+          return done(200);
+        }
+        fail(res, 405, "method_not_allowed", "GET 또는 POST만 됩니다", rid);
+        return done(405);
+      }
+
+      if (rest.length === 1 && rest[0] === "schema" && req.method === "GET") {
+        send(res, 200, await getAgentStatusSchema(), rid);
+        return done(200);
+      }
+
+      if (rest.length === 1) {
+        if (req.method !== "GET") {
+          fail(res, 405, "method_not_allowed", "GET만 됩니다 (갱신은 POST /agent-status)", rid);
+          return done(405);
+        }
+        send(res, 200, await getAgentStatus(rest[0], paramsToObject(params)), rid);
+        return done(200);
       }
     }
 
