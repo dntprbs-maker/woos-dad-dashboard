@@ -338,6 +338,96 @@ export function openapi(req) {
           responses: { 200: { description: "수정됨" } }
         }
       },
+      "/messages": {
+        get: {
+          operationId: "listMessages",
+          summary: "AI 공용 대화방 조건 조회 (지난 스레드 되짚기)",
+          parameters: [
+            { name: "status", in: "query", schema: { type: "string" }, description: "쉼표 구분. 새메시지/확인/처리완료" },
+            { name: "sender", in: "query", schema: { type: "string" } },
+            { name: "recipient", in: "query", schema: { type: "string" } },
+            { name: "q", in: "query", schema: { type: "string" }, description: "제목 부분일치" },
+            { name: "relatedTask", in: "query", schema: { type: "string" } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 25, maximum: 100 } },
+            { name: "cursor", in: "query", schema: { type: "string" } }
+          ],
+          responses: { 200: { description: "메시지 목록" } }
+        },
+        post: {
+          operationId: "sendMessage",
+          summary: "메시지 등록 (발신자·수신자·제목·내용이 비면 400으로 거절)",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: {
+              type: "object",
+              required: ["sender", "recipients", "title", "body"],
+              properties: {
+                sender: { type: "string", description: "발신자 — 자기 이름" },
+                recipients: { type: "array", items: { type: "string" }, description: "수신자. 모두에게는 ['전체']" },
+                title: { type: "string" },
+                body: { type: "string", description: "내용. 본문에만 적는 것은 등록으로 인정하지 않는다" },
+                relatedTask: { type: "string" }
+              }
+            } } }
+          },
+          responses: {
+            201: { description: "등록됨" },
+            400: { description: "필수 속성 누락 또는 선택지에 없는 이름" }
+          }
+        }
+      },
+      "/messages/inbox": {
+        get: {
+          operationId: "checkMessages",
+          summary: "내 미처리 수신함. 수신자로 서버측 필터를 걸지 않아 속성이 빈 메시지도 malformed 로 함께 알린다",
+          parameters: [
+            { name: "me", in: "query", required: true, schema: { type: "string" },
+              description: "내 이름. 해리(헤르메스)와 Claude Code는 다른 AI다" },
+            { name: "limit", in: "query", schema: { type: "integer", default: 50, maximum: 100 } }
+          ],
+          responses: { 200: { description: "수신함" } }
+        }
+      },
+      "/messages/schema": {
+        get: {
+          operationId: "getMessengerSchema",
+          summary: "대화방 DB의 속성·선택지와 필수 항목",
+          responses: { 200: { description: "스키마" } }
+        }
+      },
+      "/messages/{id}": {
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        get: {
+          operationId: "getMessage",
+          summary: "메시지 단건 (본문 포함)",
+          responses: { 200: { description: "메시지" } }
+        },
+        patch: {
+          operationId: "updateMessage",
+          summary: "메시지 수정·읽음 처리. 상태는 받는 쪽이 관리한다",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: {
+              type: "object",
+              properties: {
+                status: { type: "string", description: "새메시지 / 확인 / 처리완료" },
+                title: { type: "string" },
+                body: { type: "string" },
+                sender: { type: "string" },
+                recipients: { type: "array", items: { type: "string" } },
+                relatedTask: { type: "string" }
+              }
+            } } }
+          },
+          responses: { 200: { description: "수정됨" } }
+        },
+        delete: {
+          operationId: "archiveMessage",
+          summary: "메시지 보관 (노션 휴지통으로. 복구 가능)",
+          parameters: [{ name: "confirm", in: "query", required: true, schema: { type: "string", enum: ["true"] } }],
+          responses: { 200: { description: "보관됨" } }
+        }
+      },
       "/schema": {
         get: {
           operationId: "getSchema",

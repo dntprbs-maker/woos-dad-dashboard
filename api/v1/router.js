@@ -13,6 +13,13 @@
 //   GET    /api/v1/projects/schema    프로젝트 DB 속성·선택지
 //   GET    /api/v1/projects/{이름|id} 프로젝트 현황 (개요 + 미완료·최근완료 작업)
 //   PATCH  /api/v1/projects/{이름|id} 프로젝트 현재상태 등 갱신
+//   GET    /api/v1/messages           대화방 조건 조회
+//   POST   /api/v1/messages           메시지 등록 (필수 속성 누락 시 거절)
+//   GET    /api/v1/messages/inbox?me= 내 미처리 수신함
+//   GET    /api/v1/messages/schema    대화방 DB 속성·선택지
+//   GET    /api/v1/messages/{id}      단건 조회
+//   PATCH  /api/v1/messages/{id}      수정·읽음 처리
+//   DELETE /api/v1/messages/{id}?confirm=true  보관(휴지통) 처리
 //
 // 특정 AI에 종속되지 않는 순수 HTTP+JSON 인터페이스다.
 // 실제 동작은 _lib/ops.js 에 있고 MCP 서버(api/mcp-server.js)도 같은 것을 쓴다.
@@ -27,6 +34,10 @@ import {
 } from "../_lib/ops.js";
 import { getRules, updateRules } from "../_lib/rules.js";
 import { listProjects, getProject, updateProject, getProjectSchema } from "../_lib/projects.js";
+import {
+  checkMessages, listMessages, getMessage, sendMessage,
+  updateMessage, archiveMessage, getMessengerSchema
+} from "../_lib/messages.js";
 import { openapi } from "../_lib/openapi.js";
 
 // 알려진 한계: 노션 쿼리 인덱스는 즉시 일관되지 않는다. 실측하면 방금 만든 페이지가
@@ -141,6 +152,62 @@ export default async function handler(req, res) {
           return done(200);
         }
         fail(res, 405, "method_not_allowed", "GET 또는 PATCH만 됩니다", rid);
+        return done(405);
+      }
+    }
+
+    // AI 공용 대화방 — MCP의 check_messages / send_message 등과 같은 코드
+    if (segments[0] === "messages") {
+      const rest = segments.slice(1);
+
+      if (rest.length === 0) {
+        if (req.method === "GET") {
+          send(res, 200, await listMessages(paramsToObject(params)), rid);
+          return done(200);
+        }
+        if (req.method === "POST") {
+          send(res, 201, await sendMessage(await readJson(req)), rid);
+          return done(201);
+        }
+        fail(res, 405, "method_not_allowed", "GET 또는 POST만 됩니다", rid);
+        return done(405);
+      }
+
+      // 내 미처리 수신함. 수신자로 서버측 필터를 걸지 않는 것이 핵심이라 목록과 분리했다.
+      if (rest.length === 1 && rest[0] === "inbox" && req.method === "GET") {
+        send(res, 200, await checkMessages(paramsToObject(params)), rid);
+        return done(200);
+      }
+
+      if (rest.length === 1 && rest[0] === "schema" && req.method === "GET") {
+        send(res, 200, await getMessengerSchema(), rid);
+        return done(200);
+      }
+
+      if (rest.length === 1) {
+        const id = rest[0];
+        if (!UUID_RE.test(id)) {
+          fail(res, 400, "invalid_id", "메시지 ID는 Notion 페이지 UUID여야 합니다", rid);
+          return done(400);
+        }
+        if (req.method === "GET") {
+          send(res, 200, await getMessage(id), rid);
+          return done(200);
+        }
+        if (req.method === "PATCH") {
+          send(res, 200, await updateMessage(id, await readJson(req)), rid);
+          return done(200);
+        }
+        if (req.method === "DELETE") {
+          if (params.get("confirm") !== "true") {
+            fail(res, 400, "confirm_required",
+              "보관 처리는 ?confirm=true 가 필요합니다 (노션 휴지통으로 이동, 복구 가능)", rid);
+            return done(400);
+          }
+          send(res, 200, await archiveMessage(id), rid);
+          return done(200);
+        }
+        fail(res, 405, "method_not_allowed", "GET, PATCH, DELETE만 됩니다", rid);
         return done(405);
       }
     }

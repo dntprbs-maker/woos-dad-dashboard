@@ -145,6 +145,61 @@ export async function retrieveSourceMeta(ref) {
   return call(path, { version: ref.version, retries: 1 });
 }
 
+/**
+ * 관계로 유도할 수 없는 데이터소스를 ID만으로 잡을 때 쓴다(AI 공용 대화방 등).
+ * 그 ID가 옛 database인지 새 data source인지 런타임에 판별하고 캐시한다.
+ */
+const refCache = new Map(); // id -> { ref, fetchedAt }
+
+export async function resolveSourceRef(id) {
+  const key = String(id || "").trim();
+  if (!key) throw new NotionError(503, "not_configured", "데이터소스 ID가 비어 있습니다");
+
+  const hit = refCache.get(key);
+  if (hit && Date.now() - hit.fetchedAt < SCHEMA_TTL_MS) return hit.ref;
+
+  let ref = null;
+  try {
+    await call(`/databases/${key}`, { version: LEGACY_VERSION, retries: 1 });
+    ref = { id: key, mode: "database", version: LEGACY_VERSION };
+  } catch (e) {
+    if (e.status !== 404 && e.status !== 400) throw e;
+  }
+  if (!ref) {
+    await call(`/data_sources/${key}`, { version: MODERN_VERSION, retries: 1 });
+    ref = { id: key, mode: "data_source", version: MODERN_VERSION };
+  }
+
+  refCache.set(key, { ref, fetchedAt: Date.now() });
+  return ref;
+}
+
+/* 아래 넷은 작업 DB에 묶인 createPage/updatePage/retrievePage/listBlocks 와 같은 일을
+   하되, 대상 데이터소스를 인자로 받는다. 기존 함수는 그대로 두어 회귀를 막는다. */
+
+export async function createPageIn(ref, properties, children) {
+  const parent = ref.mode === "database"
+    ? { database_id: ref.id }
+    : { type: "data_source_id", data_source_id: ref.id };
+  const body = { parent, properties };
+  if (children && children.length) body.children = children;
+  return call(`/pages`, { method: "POST", body, version: ref.version });
+}
+
+export async function retrievePageIn(ref, pageId) {
+  return call(`/pages/${pageId}`, { version: ref.version });
+}
+
+export async function updatePageIn(ref, pageId, properties, extra = {}) {
+  const body = { ...extra };
+  if (properties && Object.keys(properties).length) body.properties = properties;
+  return call(`/pages/${pageId}`, { method: "PATCH", body, version: ref.version });
+}
+
+export async function listBlocksIn(ref, pageId, pageSize = 50) {
+  return call(`/blocks/${pageId}/children?page_size=${pageSize}`, { version: ref.version });
+}
+
 export async function querySource(ref, { filter, sorts, pageSize = 100, startCursor } = {}) {
   const body = { page_size: Math.min(100, Math.max(1, pageSize)) };
   if (filter) body.filter = filter;

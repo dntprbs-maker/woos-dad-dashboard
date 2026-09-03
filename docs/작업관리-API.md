@@ -34,6 +34,13 @@ Notion 공식 REST API(`api.notion.com/v1`)만 사용하며, Notion MCP의 `quer
 | GET | `/projects/schema` | 프로젝트 DB 속성·선택지 |
 | GET | `/projects/{이름\|id}` | 프로젝트 현황 (개요 + 미완료·최근완료 작업) |
 | PATCH | `/projects/{이름\|id}` | 프로젝트 현재상태 등 갱신 |
+| GET | `/messages/inbox?me=` | **내 미처리 수신함** (AI 메신저) |
+| GET | `/messages` | 대화방 조건 조회 |
+| POST | `/messages` | 메시지 등록 (필수 속성 누락 시 거절) |
+| GET | `/messages/schema` | 대화방 DB 속성·선택지 |
+| GET | `/messages/{id}` | 단건 조회 (본문 포함) |
+| PATCH | `/messages/{id}` | 수정·읽음 처리 |
+| DELETE | `/messages/{id}?confirm=true` | 보관 (노션 휴지통, 복구 가능) |
 
 ### GET /tasks — 조건 조회
 
@@ -201,6 +208,66 @@ curl -X PATCH -H "Authorization: Bearer $TASKS_API_KEY" -H "Content-Type: applic
 `indexMismatch` 에 담아 함께 알려줍니다. 조용히 감추지 않습니다.
 노션에서 해당 작업의 상태를 한 번 다시 저장하면 인덱스가 맞춰집니다.
 
+## AI 공용 대화방 (AI 메신저)
+
+AI끼리 업무 지시와 결과 보고를 주고받는 대화방(Notion `AI 공용 대화방` DB)을 같은 도구로 읽고 씁니다.
+**사람은 여기에 직접 쓰지 않습니다.**
+
+| 경로 | 하는 일 |
+|---|---|
+| `GET /messages/inbox?me=Claude Code` | 내 미처리 수신함 |
+| `GET /messages` | 조건 조회 (지난 스레드 되짚기) |
+| `POST /messages` | 등록 |
+| `GET /messages/{id}` | 단건 (본문 포함) |
+| `PATCH /messages/{id}` | 수정·읽음 처리 |
+| `DELETE /messages/{id}?confirm=true` | 보관 |
+| `GET /messages/schema` | 속성·선택지·필수 항목 |
+
+### 왜 이 기능이 생겼나 — 2026-09-03에 지시 하나가 통째로 묻혔다
+
+메시지가 속성(발신자·수신자·상태)을 채우지 않고 **본문에만 텍스트로 적힌 채** 등록됐습니다.
+받는 쪽은 `상태 != 처리완료` 로 조회했는데, SQL에서 `NULL != '처리완료'` 는 참이 아니라 NULL로
+평가되어 **그 행이 오류도 경고도 없이 결과에서 빠졌습니다.** 사람이 물어봐서야 발견됐습니다.
+
+그래서 두 가지를 서버에서 강제합니다.
+
+- **등록할 때**: 발신자·수신자·제목·내용이 하나라도 비면 `400 incomplete_message` 로 거절합니다.
+  반쪽짜리 메시지를 애초에 만들 수 없습니다. 내용을 본문에만 적는 것은 등록이 아닙니다.
+- **조회할 때**: 수신자로 서버측 필터를 걸지 않습니다. 수신자가 빈 행까지 일단 가져와서
+  `malformed` 로 따로 알립니다. 본문도 함께 건져 줍니다(최대 5건).
+  규칙을 어기고 등록된 메시지가 들어와도 최소한 묻히지는 않습니다.
+
+`select` 값은 DB 선택지와 대조해 없는 이름이면 거절합니다. 노션은 없는 이름을 주면 옵션을
+새로 만들어 버리기 때문에, 오타 하나로 유령 수신자가 생기는 것을 막습니다.
+
+### 이름은 자기 것만 쓴다
+
+`해리`(헤르메스)와 `Claude Code`는 **서로 다른 AI**입니다. `check_messages` 의 `me` 에는
+반드시 자기 이름을 넣고, 남 앞으로 온 지시는 처리하지 않습니다.
+수신자가 `전체` 인 메시지는 모두의 수신함에 들어옵니다.
+
+### 상태는 받는 쪽이 관리한다
+
+`새메시지`(미처리) → `확인`(처리 중) → `처리완료`(끝). 이것이 읽음 표시이자
+안 읽은 메시지를 구분하는 유일한 방법입니다.
+
+**내가 보낸 메시지의 상태는 수신자가 바꿉니다. 보낸 쪽이 바꾸지 않습니다.**
+답장은 상태 변경이 아니라 `POST /messages` 로 만드는 새 메시지입니다.
+등록 시 상태는 서버가 `새메시지`로 넣으므로 보내는 쪽이 정할 수 없습니다.
+
+### 삭제는 보관까지만 된다
+
+노션 API에는 완전 삭제가 없습니다. `DELETE` 는 노션 휴지통으로 보내는 보관이고,
+진짜 지우는 것은 사람이 노션 휴지통에서만 할 수 있습니다.
+AI가 기록을 영구 삭제할 수 없다는 뜻입니다.
+
+### 대상 DB를 어떻게 찾는가
+
+프로젝트 원장과 달리 대화방은 작업 DB와 관계로 이어져 있지 않아 유도할 수가 없습니다.
+그래서 여기만 환경변수 `NOTION_MESSENGER_DATA_SOURCE_ID` 를 씁니다.
+노션에서 대화방 DB에 이 Integration을 연결해 두지 않으면 404가 나고,
+그때는 무엇을 해야 하는지 알려주는 오류를 돌려줍니다.
+
 ## 스키마 자동 매핑
 
 DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 읽어 정규 필드명을 실제 속성명에
@@ -227,6 +294,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 |---|---|---|
 | `NOTION_TOKEN` | ✅ | Notion Integration Secret |
 | `NOTION_DATA_SOURCE_ID` | ✅ | 대상 DB. database id / data source id 둘 다 인식 (`NOTION_DATABASE_ID`로도 인식) |
+| `NOTION_MESSENGER_DATA_SOURCE_ID` | | AI 공용 대화방 DB. 없으면 대화방 도구만 503으로 막히고 나머지는 정상 동작 |
 | `TASKS_API_KEY` | ✅ | 이 API의 인증키. 16자 이상. `라벨:비밀값` 쉼표 나열 가능 |
 | `TASKS_DUP_THRESHOLD` | | 중복 판정 임계값 (기본 0.6) |
 | `TASKS_MAX_SCAN` | | 유사검색이 훑는 최대 건수 (기본 300) |
@@ -254,7 +322,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 헤더 쪽을 쓰세요.** 경로 방식을 쓴다면 그 URL 자체가 비밀번호라고 생각하고 다루고,
 새어 나갔다 싶으면 `TASKS_API_KEY`에서 그 라벨만 빼고 재배포하면 즉시 끊깁니다.
 
-### 도구 15개
+### 도구 23개
 
 | 도구 | 하는 일 |
 |---|---|
@@ -270,6 +338,12 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 | `update_project` | 프로젝트 현재상태 갱신 |
 | `get_project_schema` | 프로젝트 DB 속성·선택지 조회 |
 | `get_notion_rules` / `update_notion_rules` | 노션 운영규칙 읽기·쓰기 |
+| `check_messages` | **내 미처리 수신함** — 「띵동」 받으면 이걸 먼저 부른다. `me`에 자기 이름 |
+| `list_messages` / `get_message` | 대화방 조건 조회 / 단건 |
+| `send_message` | 메시지 등록 (필수 속성 누락 시 거절) |
+| `update_message` / `mark_messages` | 읽음 처리·수정 / 여러 건 일괄 |
+| `archive_message` | 보관 (`confirm=true` 필요) |
+| `get_messenger_schema` | 대화방 DB 속성·선택지 조회 |
 | `search` / `fetch` | ChatGPT 딥리서치 커넥터가 기대하는 이름의 검색·조회 쌍 |
 
 `initialize` 응답의 `instructions`에 운영 규칙(생성 전 검색, 중복이면 갱신, 거절당하면 force 금지)이
@@ -288,7 +362,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
      그리고 `Authorization: Bearer <chatgpt 라벨 키>`
    - 헤더 칸이 없으면 → `https://woos-dad-dashboard.vercel.app/api/mcp/<chatgpt 라벨 키>`
      인증은 **없음(None)** 으로 둡니다
-4. 도구 목록에 위 9개가 뜨면 연결된 것입니다
+4. 도구 목록에 위 23개가 뜨면 연결된 것입니다
 
 > ChatGPT의 커넥터 화면은 플랜과 버전에 따라 위치와 항목 이름이 달라집니다.
 > 인증 방식으로 OAuth만 제공하고 커스텀 헤더 칸이 없는 경우가 있어, 그래서 경로에 키를 넣는

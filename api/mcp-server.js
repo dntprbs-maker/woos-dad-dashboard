@@ -17,8 +17,13 @@ import {
 } from "./_lib/ops.js";
 import { getRules, updateRules } from "./_lib/rules.js";
 import { listProjects, getProject, updateProject, getProjectSchema } from "./_lib/projects.js";
+import {
+  checkMessages, listMessages, getMessage, sendMessage,
+  updateMessage, markMessages, archiveMessage, getMessengerSchema,
+  STATUS_NEW, STATUS_SEEN, STATUS_DONE
+} from "./_lib/messages.js";
 
-const SERVER_INFO = { name: "woos-tasks", title: "공용 작업관리", version: "1.2.0" };
+const SERVER_INFO = { name: "woos-tasks", title: "공용 작업관리", version: "1.3.0" };
 const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const LATEST_PROTOCOL = SUPPORTED_PROTOCOLS[0];
 
@@ -51,7 +56,23 @@ const INSTRUCTIONS = [
   "- 프로젝트 구분의 정본은 프로젝트 관계(projectRef)다. 프로젝트명 텍스트는 호환용이다.",
   "  create_task 에 project(이름)만 줘도 서버가 같은 이름의 프로젝트를 찾아 관계를 자동으로 채운다.",
   "- 작업을 마감해서 프로젝트 전체 상황이 달라졌으면 update_project 로 `현재상태`도 같이 갱신한다.",
-  "  이 문구가 오래되면 다른 AI가 프로젝트를 잘못 판단한다."
+  "  이 문구가 오래되면 다른 AI가 프로젝트를 잘못 판단한다.",
+  "",
+  "AI 공용 대화방 (AI 메신저):",
+  "**대화방을 읽고 쓰는 것은 이 도구로만 한다.** 공식 Notion MCP로 대화방 페이지를 직접",
+  "만들거나 고치지 마라. 그렇게 등록된 메시지는 속성이 비어 받는 쪽 조회에서 빠진다.",
+  "",
+  "- 「띵동」을 받으면 check_messages 에 자기 이름(me)을 주고 미처리 수신함을 확인한다.",
+  "- **자기 이름을 정확히 쓴다.** `해리`(헤르메스)와 `Claude Code`는 서로 다른 AI다.",
+  "  남 앞으로 온 지시를 대신 처리하지 마라.",
+  "- 메시지를 읽으면 update_message 로 상태를 `확인`(처리 중) → `처리완료`(끝)로 바꾼다.",
+  "  이게 읽음 표시이자 안 읽은 메시지를 구분하는 유일한 방법이다.",
+  "- **상태는 받는 쪽이 관리한다.** 내가 보낸 메시지의 상태는 수신자가 바꾼다. 내가 바꾸지 않는다.",
+  "- 답장은 상태 변경이 아니라 send_message 로 만드는 새 메시지다.",
+  "- send_message 는 발신자·수신자·제목·내용이 하나라도 비면 등록을 거절한다.",
+  "  내용을 본문에만 적는 것은 등록이 아니다.",
+  "- check_messages 결과에 malformed 가 있으면 규칙을 어기고 등록된 메시지다.",
+  "  본문을 읽어 내 것인지 판단하고, 남의 것이면 손대지 말고 보낸 쪽에 알린다."
 ].join("\n");
 
 /* -------------------------------------------------------------- 도구 정의 */
@@ -325,6 +346,144 @@ const TOOLS = [
     },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
   },
+  // ── AI 공용 대화방 (AI 메신저) ─────────────────────────────────────────
+  {
+    name: "check_messages",
+    title: "내 미처리 메시지 확인",
+    description:
+      "AI 공용 대화방에서 나에게 온 미처리 메시지를 확인한다. 「띵동」을 받으면 이걸 먼저 부른다. " +
+      "me 에 자기 이름을 정확히 넣을 것 — `해리`(헤르메스)와 `Claude Code`는 다른 AI다. " +
+      "남 앞으로 온 지시를 대신 처리하면 안 된다. " +
+      "속성이 비어 누구 것인지 알 수 없는 메시지는 malformed 로 따로 알려 준다.",
+    inputSchema: {
+      type: "object",
+      required: ["me"],
+      properties: {
+        me: { type: "string", description: "내 이름. 예: 'Claude Code'. 대화방 수신자 선택지에 있는 이름이어야 한다" },
+        limit: { type: "integer", description: "최대 건수 (기본 50)" }
+      }
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "list_messages",
+    title: "대화방 조건 조회",
+    description:
+      "대화방 메시지를 조건으로 조회한다. 지난 스레드를 되짚어 볼 때 쓴다. " +
+      "내 할 일을 확인하는 용도로는 check_messages 를 쓸 것.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "쉼표 구분. 예: 새메시지,확인" },
+        sender: { type: "string", description: "발신자" },
+        recipient: { type: "string", description: "수신자" },
+        q: { type: "string", description: "제목 부분일치" },
+        relatedTask: { type: "string", description: "관련작업 부분일치" },
+        limit: { type: "integer", description: "기본 25, 최대 100" },
+        cursor: { type: "string", description: "다음 페이지 커서" }
+      }
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "get_message",
+    title: "메시지 단건 조회",
+    description: "메시지 한 건을 본문까지 가져온다.",
+    inputSchema: {
+      type: "object",
+      required: ["id"],
+      properties: { id: { type: "string", description: "Notion 페이지 UUID" } }
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
+  {
+    name: "send_message",
+    title: "메시지 보내기",
+    description:
+      "대화방에 메시지를 등록한다. 작업 결과 보고와 지시 전달 모두 이걸로 한다. " +
+      "발신자·수신자·제목·내용이 하나라도 비면 등록을 거절한다 — 속성이 빈 메시지는 " +
+      "받는 쪽 조회에서 빠져 묻히기 때문이다. 내용을 본문에만 적는 것은 등록이 아니다. " +
+      "상태는 서버가 `새메시지`로 넣는다. 보내는 쪽이 정하지 않는다.",
+    inputSchema: {
+      type: "object",
+      required: ["sender", "recipients", "title", "body"],
+      properties: {
+        sender: { type: "string", description: "발신자 — 자기 이름" },
+        recipients: {
+          type: "array",
+          items: { type: "string" },
+          description: "수신자 목록. 모두에게 보내려면 ['전체']"
+        },
+        title: { type: "string", description: "제목" },
+        body: { type: "string", description: "내용 — 실제 메시지 본문" },
+        relatedTask: { type: "string", description: "관련작업 (작업명과 UUID). 선택" }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  },
+  {
+    name: "update_message",
+    title: "메시지 수정 · 읽음 처리",
+    description:
+      "메시지를 고친다. 주로 읽음 표시(상태 전이)에 쓴다: `확인`=처리 중, `처리완료`=끝. " +
+      "**상태는 받는 쪽이 관리한다.** 내가 보낸 메시지의 상태는 수신자가 바꾼다. 내가 바꾸지 않는다.",
+    inputSchema: {
+      type: "object",
+      required: ["id"],
+      properties: {
+        id: { type: "string", description: "Notion 페이지 UUID" },
+        status: {
+          type: "string",
+          enum: [STATUS_NEW, STATUS_SEEN, STATUS_DONE],
+          description: "상태"
+        },
+        title: { type: "string", description: "제목" },
+        body: { type: "string", description: "내용" },
+        sender: { type: "string", description: "발신자" },
+        recipients: { type: "array", items: { type: "string" }, description: "수신자 목록" },
+        relatedTask: { type: "string", description: "관련작업" }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  },
+  {
+    name: "mark_messages",
+    title: "여러 메시지 상태 일괄 변경",
+    description: "여러 건의 상태를 한 번에 바꾼다. 끝난 스레드를 통째로 닫을 때 쓴다.",
+    inputSchema: {
+      type: "object",
+      required: ["ids", "status"],
+      properties: {
+        ids: { type: "array", items: { type: "string" }, description: "Notion 페이지 UUID 배열" },
+        status: { type: "string", enum: [STATUS_NEW, STATUS_SEEN, STATUS_DONE], description: "바꿀 상태" }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  },
+  {
+    name: "archive_message",
+    title: "메시지 보관",
+    description:
+      "메시지를 노션 휴지통으로 보낸다. 복구할 수 있지만 목록에서는 사라진다. " +
+      "노션 API에는 완전 삭제가 없어 여기서 할 수 있는 건 보관까지다. " +
+      "사람이 명시적으로 시켰을 때만 쓸 것.",
+    inputSchema: {
+      type: "object",
+      required: ["id", "confirm"],
+      properties: {
+        id: { type: "string", description: "Notion 페이지 UUID" },
+        confirm: { type: "boolean", description: "true 여야 실행된다" }
+      }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true }
+  },
+  {
+    name: "get_messenger_schema",
+    title: "대화방 DB 스키마 조회",
+    description: "대화방 DB의 속성·선택지와 필수 항목을 본다. 쓸 수 있는 이름을 확인할 때.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, openWorldHint: true }
+  },
   // ── ChatGPT 딥리서치 커넥터가 기대하는 이름 (search / fetch) ────────────
   {
     name: "search",
@@ -405,6 +564,23 @@ async function runTool(name, args = {}) {
       return updateProject(project, rest);
     }
     case "get_project_schema": return getProjectSchema();
+
+    case "check_messages": return checkMessages(args);
+    case "list_messages":  return listMessages(args);
+    case "get_message":    return getMessage(args.id);
+    case "send_message":   return sendMessage(args);
+    case "update_message": {
+      const { id, ...rest } = args;
+      return updateMessage(id, rest);
+    }
+    case "mark_messages":  return markMessages(args.ids, args.status);
+    case "archive_message": {
+      if (args.confirm !== true) {
+        throw new ApiError(400, "confirm_required", "보관하려면 confirm=true 를 줘야 합니다");
+      }
+      return archiveMessage(args.id);
+    }
+    case "get_messenger_schema": return getMessengerSchema();
 
     case "get_notion_rules": return getRules();
     case "update_notion_rules":
