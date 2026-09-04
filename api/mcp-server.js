@@ -858,3 +858,7 @@ export default async function handler(req, res) {
     res.status(500).json(rpcError(body?.id ?? null, -32603, e.message));
   }
 }
+
+// OpenAI/ChatGPT 쪽 도구 목록 캐시 우회 테스트용 별도 경로(mcp-v2.js)가
+// 완전히 같은 도구 정의·실행 로직을 그대로 쓸 수 있도록 내보낸다.
+export { handleRpc };

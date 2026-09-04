@@ -8,6 +8,9 @@
     },
     "api/mcp-server.js": {
       "maxDuration": 60
+    },
+    "api/mcp-v2.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
@@ -22,6 +25,10 @@
     {
       "source": "/api/mcp/:path*",
       "destination": "/api/mcp-server?mcpkey=:path*"
+    },
+    {
+      "source": "/api/mcp-v2/:path*",
+      "destination": "/api/mcp-v2?mcpkey=:path*"
     }
   ],
   "headers": [
