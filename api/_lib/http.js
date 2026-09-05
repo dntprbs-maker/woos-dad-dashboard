@@ -9,9 +9,16 @@ import { createHash, timingSafeEqual, randomUUID } from "node:crypto";
 
 const LABEL_RE = /^[A-Za-z0-9_-]{1,32}$/;
 
-/** TASKS_API_KEY="secret" 또는 "chatgpt:secret1,claude:secret2" 를 파싱한다. */
+/**
+ * TASKS_API_KEY="secret" 또는 "chatgpt:secret1,claude:secret2" 를 파싱한다.
+ * TASKS_API_KEY_HERMES는 TASKS_API_KEY를 덮어쓰지 않고 그 뒤에 이어 붙이는
+ * 별도 변수다 — 기존 TASKS_API_KEY는 Vercel에서 Secret(write-only)이라 값을
+ * 다시 읽어 라벨을 추가할 수 없어서, 해리 전용 키를 여기 새로 추가했다.
+ */
 function configuredKeys() {
-  const raw = process.env.TASKS_API_KEY || "";
+  const raw = [process.env.TASKS_API_KEY, process.env.TASKS_API_KEY_HERMES]
+    .filter(Boolean)
+    .join(",");
   const entries = [];
   for (const part of raw.split(",").map(s => s.trim()).filter(Boolean)) {
     const idx = part.indexOf(":");
