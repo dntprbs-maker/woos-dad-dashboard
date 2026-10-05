@@ -26,14 +26,12 @@ export const IDS = {
   chorong: env("WOOS_CHORONG_PAGE_ID", "3cf2d174-b03c-81ea-a810-c8d8f18668d5"),
 };
 
-/** MCP로는 휴지통 처리 자체를 허용하지 않는 핵심 객체 (구조 재편 시에도 사람이 직접 처리) */
+/** 보호 객체(구조 설정값) — 휴지통 불가·이동은 아빠 지시 필요·스키마는 추가만. 운영규칙 문서는 safety.ts가 운영규칙 표에서 더한다 */
 export const PROTECTED = new Set(
   [IDS.rules, IDS.rulesExec, IDS.rulesIdentity, IDS.rulesDev, IDS.taskDb, IDS.taskDs, IDS.projectDs, IDS.projectDb,
    IDS.employeeDs, IDS.employeeDb, IDS.programDs, IDS.messengerDs, IDS.messengerDb, IDS.worklogRoot, IDS.hq, IDS.chorong,
    ...(process.env.WOOS_PROTECTED_IDS || "").split(",").filter(Boolean)].map((x) => normId(x)),
 );
-/** 운영규칙 문서 — 일반 쓰기 도구로 수정 불가, rules_update(아빠 지시 필수)로만 */
-export const RULE_DOCS = new Set([IDS.rules, IDS.rulesExec, IDS.rulesIdentity, IDS.rulesDev].map(normId));
 
 // ───────── 상태 디렉터리·감사 로그 ─────────
 export const STATE_DIR = process.env.WOOS_MCP_STATE_DIR || (process.env.VERCEL ? "/tmp/woos-memoryhub-mcp" : join(process.env.LOCALAPPDATA || process.env.HOME || ".", "woos-memoryhub-mcp"));
@@ -124,10 +122,6 @@ export async function owningPage(blockId: string): Promise<string | null> {
   return null;
 }
 
-export function assertNotRuleDoc(pageId: string) {
-  if (RULE_DOCS.has(normId(pageId)))
-    throw new Error("운영규칙 문서는 일반 쓰기 도구로 수정할 수 없습니다. 아빠의 명시적 지시가 있을 때 rules_update 도구를 사용하세요.");
-}
 
 // ───────── 휴지통 승인 토큰 ─────────
 interface Pending { token: string; created: number; items: { id: string; kind: Kind; title: string; last_edited_time: string }[] }

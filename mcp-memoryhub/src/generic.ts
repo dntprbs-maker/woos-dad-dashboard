@@ -1,9 +1,10 @@
 // 범용 Notion 도구 구현 (MCP 등록은 index.ts)
 import { api, paginate, normId, token, NOTION_VERSION } from "./notion.js";
+import { assertNotRuleDoc, assertMoveAllowed, assertSchemaChange, assertTaskDirectWrite, isProtected, isTestObject, guardRaw, TEST_PREFIX } from "./safety.js";
 import { titleOf, simplifyProps, buildProps, schemaDef, mdToBlocks, appendBlocks, blocksToMd, plain, inlineMd } from "./format.js";
 import {
-  resolve, describe, toDataSource, owningPage, assertNotRuleDoc, audit, markCreated, createdInfo,
-  PROTECTED, newPending, takePending, TRASH_MAX, Kind,
+  resolve, describe, toDataSource, owningPage, audit, markCreated, createdInfo,
+  IDS, PROTECTED, newPending, takePending, TRASH_MAX, Kind,
 } from "./core.js";
 
 // ───────── 검색 ─────────
@@ -170,8 +171,10 @@ async function parentFor(parentId: string): Promise<{ parent: any; schema?: any;
 }
 
 export async function createPage(a: { parent_id: string; title: string; properties?: Record<string, any>; content_markdown?: string; icon?: string; test_object?: boolean }) {
+  if (a.test_object && !a.title.startsWith(TEST_PREFIX.trim())) a = { ...a, title: TEST_PREFIX + a.title };
   const { parent, schema, parentKind } = await parentFor(a.parent_id);
-  if (parentKind === "page") assertNotRuleDoc(parent.page_id);
+  if (parentKind === "data_source" && [IDS.taskDs, IDS.taskDb].map(normId).includes(normId(parent.data_source_id))) throw new Error("작업 원장 레코드는 task_create로만 만듭니다(중복 검색·프로젝트 연결·입력자 기록).");
+  if (parentKind === "page") await assertNotRuleDoc(parent.page_id);
   let properties: any;
   if (schema) {
     const titleProp = Object.entries<any>(schema).find(([, v]) => v.type === "title")![0];
@@ -192,8 +195,9 @@ export async function createPage(a: { parent_id: string; title: string; properti
 }
 
 export async function createDatabase(a: { parent_page_id: string; title: string; properties: Record<string, any>; test_object?: boolean }) {
+  if (a.test_object && !a.title.startsWith(TEST_PREFIX.trim())) a = { ...a, title: TEST_PREFIX + a.title };
   const pid = normId(a.parent_page_id);
-  assertNotRuleDoc(pid);
+  await assertNotRuleDoc(pid);
   const props: Record<string, any> = {};
   let hasTitle = false;
   for (const [k, v] of Object.entries(a.properties)) { props[k] = schemaDef(v); if (v === "title") hasTitle = true; }
@@ -209,7 +213,7 @@ export async function createDatabase(a: { parent_page_id: string; title: string;
 // ───────── 수정 ─────────
 export async function updatePage(a: { id: string; title?: string; properties?: Record<string, any>; icon?: string | null }) {
   const id = normId(a.id);
-  assertNotRuleDoc(id);
+  await assertNotRuleDoc(id);
   const page = await api("GET", `/pages/${id}`);
   if (page.in_trash) throw new Error("휴지통에 있는 페이지입니다. 먼저 restore 하세요.");
   const body: any = {};
@@ -224,6 +228,7 @@ export async function updatePage(a: { id: string; title?: string; properties?: R
   }
   if (a.icon !== undefined) body.icon = a.icon ? { type: "emoji", emoji: a.icon } : null;
   if (!Object.keys(body).length) throw new Error("바꿀 내용이 없습니다.");
+  await assertTaskDirectWrite(page, Object.keys(body.properties || {}));
   await api("PATCH", `/pages/${id}`, body);
   audit({ tool: "update_page", id, keys: Object.keys(a.properties || {}).concat(a.title !== undefined ? ["title"] : []) });
   const after = await describe(await resolve(id), true);
@@ -251,7 +256,7 @@ export async function writeContent(a: { id: string; mode: "append" | "replace" |
   const r = await resolve(a.id);
   if (r.kind !== "page" && r.kind !== "block") throw new Error("본문은 페이지(또는 블록)에만 쓸 수 있습니다.");
   const pageId = r.kind === "page" ? r.id : await owningPage(r.id);
-  if (!allowRules && pageId) assertNotRuleDoc(pageId);
+  if (!allowRules && pageId) await assertNotRuleDoc(pageId);
   if (a.mode === "append") {
     const ids = await appendBlocks(r.id, mdToBlocks(a.markdown || ""), a.after_block_id ? normId(a.after_block_id) : undefined);
     audit({ tool: "write_content", mode: "append", id: r.id, blocks: ids.length });
@@ -291,7 +296,7 @@ export async function writeContent(a: { id: string; mode: "append" | "replace" |
 
 export async function setRelation(a: { page_id: string; property: string; add?: string[]; remove?: string[]; set?: string[] }) {
   const id = normId(a.page_id);
-  assertNotRuleDoc(id);
+  await assertNotRuleDoc(id);
   const page = await api("GET", `/pages/${id}`);
   const props = await simplifyProps(page);
   if (!(a.property in props)) throw new Error(`속성 "${a.property}" 없음`);
@@ -326,10 +331,10 @@ export async function updateSchema(a: { id: string; title?: string; add?: Record
     const existing = ds.properties[k][t].options;
     props[k] = { [t]: { options: opts.map((n) => existing.find((o: any) => o.name === n) ? { id: existing.find((o: any) => o.name === n).id, name: n } : { name: n }) } };
   }
-  if (a.remove?.length && PROTECTED.has(dsId)) throw new Error("보호 대상 DB의 속성 삭제는 MCP로 하지 않습니다 (데이터 손실 위험). 아빠가 직접 처리하세요.");
   const body: any = {};
   if (Object.keys(props).length) body.properties = props;
   if (a.title) body.title = inlineMd(a.title);
+  await assertSchemaChange(dsId, ds, body);
   await api("PATCH", `/data_sources/${dsId}`, body);
   audit({ tool: "update_schema", id: dsId, add: Object.keys(a.add || {}), rename: a.rename, remove: a.remove });
   const after = await getSchema({ id: dsId });
@@ -341,12 +346,12 @@ export async function updateSchema(a: { id: string; title?: string; add?: Record
 }
 
 // ───────── 이동 ─────────
-export async function move(a: { id: string; new_parent_id: string }) {
+export async function move(a: { id: string; new_parent_id: string; dad_instruction?: string }) {
   const r = await resolve(a.id);
-  if (PROTECTED.has(r.id) && process.env.WOOS_ALLOW_PROTECTED_MOVE !== "1") {
-    // 구조 재편 단계에서 핵심 객체를 옮길 수는 있어야 하므로, 막지는 않고 기록만 남긴다
-  }
+  await assertMoveAllowed(r.id, a.dad_instruction);
+  if (r.kind === "data_source" && r.obj.parent?.database_id) await assertMoveAllowed(r.obj.parent.database_id, a.dad_instruction);
   const target = await resolve(a.new_parent_id);
+  if (target.kind === "page") await assertNotRuleDoc(target.id);
   const before = (await describe(r, false)).parent;
   if (r.kind === "page") {
     const parent = target.kind === "page" ? { type: "page_id", page_id: target.id }
@@ -361,7 +366,7 @@ export async function move(a: { id: string; new_parent_id: string }) {
     if (target.kind !== "page") throw new Error("데이터소스를 옮기려면 그 DB를 페이지 아래로 옮깁니다. 대상은 페이지여야 합니다.");
     await api("PATCH", `/databases/${dbId}`, { parent: { type: "page_id", page_id: target.id } });
   } else throw new Error("블록 이동은 지원하지 않습니다.");
-  audit({ tool: "move", id: r.id, from: before, to: target.id });
+  audit({ tool: "move", id: r.id, from: before, to: target.id, dad_instruction: a.dad_instruction?.slice(0, 200) });
   const after = await describe(await resolve(r.id), false);
   let verified = after.parent.id ? normId(after.parent.id) === target.id || (target.kind !== "page") : false;
   if (r.kind === "data_source") {
@@ -381,7 +386,7 @@ export async function trashPrepare(a: { ids: string[] }) {
   for (const raw of a.ids) {
     const r = await resolve(raw);
     if (r.kind === "block") throw new Error(`${r.id}는 블록입니다. 페이지/DB/데이터소스/레코드만 휴지통 처리합니다.`);
-    if (PROTECTED.has(r.id)) throw new Error(`보호 대상(${titleOf(r.obj)})은 MCP로 휴지통 처리할 수 없습니다. 꼭 필요하면 아빠가 Notion에서 직접 처리하세요.`);
+    if ((await isProtected(r.id)) || (r.kind === "data_source" && r.obj.parent?.database_id && (await isProtected(r.obj.parent.database_id)))) throw new Error(`보호 대상(${titleOf(r.obj)})은 MCP로 휴지통 처리할 수 없습니다. 꼭 필요하면 아빠가 Notion에서 직접 처리하세요.`);
     const d = await describe(r, false);
     if (d.in_trash) throw new Error(`${d.title}(${r.id})는 이미 휴지통에 있습니다.`);
     let childCount: number | undefined;
@@ -391,9 +396,10 @@ export async function trashPrepare(a: { ids: string[] }) {
       childCount = (await paginate("POST", `/data_sources/${dsId}/query`, {}, 500)).length;
     }
     const created = createdInfo(r.id);
+    const test = await isTestObject(r.id, r.obj);
     items.push({ id: r.id, kind: r.kind, title: d.title, last_edited_time: d.last_edited_time });
     preview.push({ id: r.id, kind: r.kind, title: d.title, parent: d.parent, url: d.url, last_edited_time: d.last_edited_time,
-      contains: childCount, created_by_this_mcp: !!created, test_object: !!created?.test });
+      contains: childCount, created_by_this_mcp: !!created || test, test_object: test });
   }
   const token = newPending(items);
   return {
@@ -409,19 +415,20 @@ export async function trashExecute(a: { approval_token: string; approval: string
   const approval = (a.approval || "").trim();
   if (approval.length < 4) throw new Error("approval(삭제 승인 근거)이 비어 있습니다.");
   const isTestCleanup = /테스트\s*객체\s*정리/.test(approval);
-  for (const it of p.items) {
-    const c = createdInfo(it.id);
-    if (isTestCleanup && !(c && c.test)) throw new Error(`'테스트 객체 정리' 근거는 이 MCP가 test_object로 만든 객체에만 쓸 수 있습니다: ${it.title} (${it.id})`);
-  }
   if (!isTestCleanup && !/아빠|사장님/.test(a.approved_by)) throw new Error("기존 데이터 휴지통 처리는 아빠(사장님)의 명시적 삭제 지시가 필요합니다. approved_by='아빠'와 실제 지시 문구를 주세요.");
-  const results: any[] = [];
+  // 실행 직전 전체 재확인 — 하나라도 어긋나면 아무것도 지우지 않는다(승인 이후 변경·토큰 재사용 차단)
+  const checked: { it: any; r: any }[] = [];
   for (const it of p.items) {
     const r = await resolve(it.id);
     const cur = await describe(r, false);
-    if (cur.title !== it.title || cur.last_edited_time !== it.last_edited_time) {
-      results.push({ id: it.id, title: it.title, trashed: false, reason: "승인 이후 대상이 바뀌었습니다(제목/수정시각). 다시 prepare 하세요." });
-      continue;
-    }
+    if (cur.in_trash) throw new Error(`이미 휴지통에 있는 대상이 포함돼 있습니다(승인 토큰 재사용 차단): ${it.title}. trash_prepare부터 다시 하세요.`);
+    if (cur.title !== it.title || cur.last_edited_time !== it.last_edited_time) throw new Error(`승인 이후 대상이 바뀌었습니다(제목/수정시각): ${it.title}. trash_prepare부터 다시 하세요.`);
+    if (await isProtected(r.id)) throw new Error(`보호 대상은 휴지통 처리할 수 없습니다: ${it.title}`);
+    if (isTestCleanup && !(await isTestObject(r.id, r.obj))) throw new Error(`'테스트 객체 정리' 근거는 이 MCP가 test_object로 만든 객체에만 쓸 수 있습니다: ${it.title} (${it.id})`);
+    checked.push({ it, r });
+  }
+  const results: any[] = [];
+  for (const { it } of checked) {
     const path = it.kind === "page" ? "/pages/" : it.kind === "database" ? "/databases/" : "/data_sources/";
     await api("PATCH", path + it.id, { in_trash: true });
     const re = await api("GET", path + it.id);
@@ -472,27 +479,9 @@ export async function verifyChange(a: { id: string; expect: { title?: string; in
 export async function apiRequest(a: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; body?: any }) {
   const path = a.path.startsWith("/") ? a.path : "/" + a.path;
   if (/^\/v1\//.test(path)) throw new Error("path는 /v1 없이 주세요 (예: /users).");
-  if (a.method === "DELETE") {
-    const m = path.match(/^\/blocks\/([0-9a-f-]{32,36})$/i);
-    if (!m) throw new Error("DELETE는 /blocks/{id}(본문 블록 삭제)만 허용됩니다. 페이지·DB는 trash_prepare → trash_execute를 쓰세요.");
-    const b = await api("GET", `/blocks/${m[1]}`);
-    if (b.type === "child_page" || b.type === "child_database") throw new Error("하위 페이지·DB 블록은 DELETE로 지울 수 없습니다. trash_prepare → trash_execute를 쓰세요.");
-    const pid = await owningPage(m[1]);
-    if (pid) assertNotRuleDoc(pid);
-    audit({ tool: "api_request", method: "DELETE", path });
-    return api("DELETE", path);
-  }
-  const bodyStr = JSON.stringify(a.body || {});
-  if (/"(in_trash|archived|is_archived)"\s*:/.test(bodyStr)) throw new Error("휴지통/보관 처리는 api_request로 할 수 없습니다. trash_prepare → trash_execute를 쓰세요.");
-  if (a.method === "PATCH" && /^\/(pages|blocks)\//.test(path)) {
-    const m = path.match(/[0-9a-f-]{32,36}/i);
-    if (m) {
-      const pid = path.startsWith("/pages/") ? normId(m[0]) : await owningPage(m[0]);
-      if (pid) assertNotRuleDoc(pid);
-    }
-  }
+  await guardRaw(a.method, path, a.body); // 전용 도구와 같은 안전 기준(safety.ts)
   if (a.method !== "GET") audit({ tool: "api_request", method: a.method, path });
-  return api(a.method, path, a.method === "GET" ? undefined : a.body ?? {});
+  return api(a.method, path, a.method === "GET" || a.method === "DELETE" ? undefined : a.body ?? {});
 }
 
 export async function uploadFile(a: { path?: string; content_base64?: string; filename?: string; attach_to?: string; caption?: string }) {
@@ -519,7 +508,7 @@ export async function uploadFile(a: { path?: string; content_base64?: string; fi
   const out: any = { file_upload_id: fu.id, status: sent.status, filename: name, content_type: ctype };
   if (a.attach_to) {
     const pid = normId(a.attach_to);
-    assertNotRuleDoc(pid);
+    await assertNotRuleDoc(pid);
     const kind = ctype.startsWith("image/") ? "image" : ctype === "application/pdf" ? "pdf" : ctype.startsWith("video/") ? "video" : ctype.startsWith("audio/") ? "audio" : "file";
     const blk: any = { type: kind, [kind]: { type: "file_upload", file_upload: { id: fu.id }, caption: a.caption ? [{ type: "text", text: { content: a.caption } }] : [] } };
     const r = await api("PATCH", `/blocks/${pid}/children`, { children: [blk] });

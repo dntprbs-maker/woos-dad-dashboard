@@ -348,11 +348,11 @@ var require_scope = __commonJS({
     exports.ValueScopeName = ValueScopeName;
     var line = (0, code_1._)`\n`;
     var ValueScope = class extends Scope {
-      constructor(opts) {
-        super(opts);
+      constructor(opts2) {
+        super(opts2);
         this._values = {};
-        this._scope = opts.scope;
-        this.opts = { ...opts, _n: opts.lines ? line : code_1.nil };
+        this._scope = opts2.scope;
+        this.opts = { ...opts2, _n: opts2.lines ? line : code_1.nil };
       }
       get() {
         return this._scope;
@@ -608,8 +608,8 @@ var require_codegen = __commonJS({
         super();
         this.nodes = nodes;
       }
-      render(opts) {
-        return this.nodes.reduce((code, n) => code + n.render(opts), "");
+      render(opts2) {
+        return this.nodes.reduce((code, n) => code + n.render(opts2), "");
       }
       optimizeNodes() {
         const { nodes } = this;
@@ -642,8 +642,8 @@ var require_codegen = __commonJS({
       }
     };
     var BlockNode = class extends ParentNode {
-      render(opts) {
-        return "{" + opts._n + super.render(opts) + "}" + opts._n;
+      render(opts2) {
+        return "{" + opts2._n + super.render(opts2) + "}" + opts2._n;
       }
     };
     var Root = class extends ParentNode {
@@ -656,10 +656,10 @@ var require_codegen = __commonJS({
         super(nodes);
         this.condition = condition;
       }
-      render(opts) {
-        let code = `if(${this.condition})` + super.render(opts);
+      render(opts2) {
+        let code = `if(${this.condition})` + super.render(opts2);
         if (this.else)
-          code += "else " + this.else.render(opts);
+          code += "else " + this.else.render(opts2);
         return code;
       }
       optimizeNodes() {
@@ -708,8 +708,8 @@ var require_codegen = __commonJS({
         super();
         this.iteration = iteration;
       }
-      render(opts) {
-        return `for(${this.iteration})` + super.render(opts);
+      render(opts2) {
+        return `for(${this.iteration})` + super.render(opts2);
       }
       optimizeNames(names, constants2) {
         if (!super.optimizeNames(names, constants2))
@@ -729,10 +729,10 @@ var require_codegen = __commonJS({
         this.from = from;
         this.to = to;
       }
-      render(opts) {
-        const varKind = opts.es5 ? scope_1.varKinds.var : this.varKind;
+      render(opts2) {
+        const varKind = opts2.es5 ? scope_1.varKinds.var : this.varKind;
         const { name, from, to } = this;
-        return `for(${varKind} ${name}=${from}; ${name}<${to}; ${name}++)` + super.render(opts);
+        return `for(${varKind} ${name}=${from}; ${name}<${to}; ${name}++)` + super.render(opts2);
       }
       get names() {
         const names = addExprNames(super.names, this.from);
@@ -747,8 +747,8 @@ var require_codegen = __commonJS({
         this.name = name;
         this.iterable = iterable;
       }
-      render(opts) {
-        return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
+      render(opts2) {
+        return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts2);
       }
       optimizeNames(names, constants2) {
         if (!super.optimizeNames(names, constants2))
@@ -767,25 +767,25 @@ var require_codegen = __commonJS({
         this.args = args;
         this.async = async;
       }
-      render(opts) {
+      render(opts2) {
         const _async = this.async ? "async " : "";
-        return `${_async}function ${this.name}(${this.args})` + super.render(opts);
+        return `${_async}function ${this.name}(${this.args})` + super.render(opts2);
       }
     };
     Func.kind = "func";
     var Return = class extends ParentNode {
-      render(opts) {
-        return "return " + super.render(opts);
+      render(opts2) {
+        return "return " + super.render(opts2);
       }
     };
     Return.kind = "return";
     var Try = class extends BlockNode {
-      render(opts) {
-        let code = "try" + super.render(opts);
+      render(opts2) {
+        let code = "try" + super.render(opts2);
         if (this.catch)
-          code += this.catch.render(opts);
+          code += this.catch.render(opts2);
         if (this.finally)
-          code += this.finally.render(opts);
+          code += this.finally.render(opts2);
         return code;
       }
       optimizeNodes() {
@@ -816,23 +816,23 @@ var require_codegen = __commonJS({
         super();
         this.error = error62;
       }
-      render(opts) {
-        return `catch(${this.error})` + super.render(opts);
+      render(opts2) {
+        return `catch(${this.error})` + super.render(opts2);
       }
     };
     Catch.kind = "catch";
     var Finally = class extends BlockNode {
-      render(opts) {
-        return "finally" + super.render(opts);
+      render(opts2) {
+        return "finally" + super.render(opts2);
       }
     };
     Finally.kind = "finally";
     var CodeGen = class {
-      constructor(extScope, opts = {}) {
+      constructor(extScope, opts2 = {}) {
         this._values = {};
         this._blockStarts = [];
         this._constants = {};
-        this.opts = { ...opts, _n: opts.lines ? "\n" : "" };
+        this.opts = { ...opts2, _n: opts2.lines ? "\n" : "" };
         this._extScope = extScope;
         this._scope = new scope_1.Scope({ parent: extScope });
         this._nodes = [new Root()];
@@ -1177,8 +1177,8 @@ var require_util = __commonJS({
     }
     exports.alwaysValidSchema = alwaysValidSchema;
     function checkUnknownRules(it, schema2 = it.schema) {
-      const { opts, self } = it;
-      if (!opts.strictSchema)
+      const { opts: opts2, self } = it;
+      if (!opts2.strictSchema)
         return;
       if (typeof schema2 === "boolean")
         return;
@@ -1466,12 +1466,12 @@ var require_errors = __commonJS({
     }
     function extraErrorProps(cxt, { params, message }, keyValues) {
       const { keyword, data, schemaValue, it } = cxt;
-      const { opts, propertyName, topSchemaRef, schemaPath } = it;
+      const { opts: opts2, propertyName, topSchemaRef, schemaPath } = it;
       keyValues.push([E.keyword, keyword], [E.params, typeof params == "function" ? params(cxt) : params || (0, codegen_1._)`{}`]);
-      if (opts.messages) {
+      if (opts2.messages) {
         keyValues.push([E.message, typeof message == "function" ? message(cxt) : message]);
       }
-      if (opts.verbose) {
+      if (opts2.verbose) {
         keyValues.push([E.schema, schemaValue], [E.parentSchema, (0, codegen_1._)`${topSchemaRef}${schemaPath}`], [names_1.default.data, data]);
       }
       if (propertyName)
@@ -1625,11 +1625,11 @@ var require_dataType = __commonJS({
     }
     exports.getJSONTypes = getJSONTypes;
     function coerceAndCheckDataType(it, types) {
-      const { gen, data, opts } = it;
-      const coerceTo = coerceToTypes(types, opts.coerceTypes);
+      const { gen, data, opts: opts2 } = it;
+      const coerceTo = coerceToTypes(types, opts2.coerceTypes);
       const checkTypes = types.length > 0 && !(coerceTo.length === 0 && types.length === 1 && (0, applicability_1.schemaHasRulesForType)(it, types[0]));
       if (checkTypes) {
-        const wrongType = checkDataTypes(types, data, opts.strictNumbers, DataType.Wrong);
+        const wrongType = checkDataTypes(types, data, opts2.strictNumbers, DataType.Wrong);
         gen.if(wrongType, () => {
           if (coerceTo.length)
             coerceData(it, types, coerceTo);
@@ -1645,15 +1645,15 @@ var require_dataType = __commonJS({
       return coerceTypes ? types.filter((t) => COERCIBLE.has(t) || coerceTypes === "array" && t === "array") : [];
     }
     function coerceData(it, types, coerceTo) {
-      const { gen, data, opts } = it;
+      const { gen, data, opts: opts2 } = it;
       const dataType = gen.let("dataType", (0, codegen_1._)`typeof ${data}`);
       const coerced = gen.let("coerced", (0, codegen_1._)`undefined`);
-      if (opts.coerceTypes === "array") {
-        gen.if((0, codegen_1._)`${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen.assign(data, (0, codegen_1._)`${data}[0]`).assign(dataType, (0, codegen_1._)`typeof ${data}`).if(checkDataTypes(types, data, opts.strictNumbers), () => gen.assign(coerced, data)));
+      if (opts2.coerceTypes === "array") {
+        gen.if((0, codegen_1._)`${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen.assign(data, (0, codegen_1._)`${data}[0]`).assign(dataType, (0, codegen_1._)`typeof ${data}`).if(checkDataTypes(types, data, opts2.strictNumbers), () => gen.assign(coerced, data)));
       }
       gen.if((0, codegen_1._)`${coerced} !== undefined`);
       for (const t of coerceTo) {
-        if (COERCIBLE.has(t) || t === "array" && opts.coerceTypes === "array") {
+        if (COERCIBLE.has(t) || t === "array" && opts2.coerceTypes === "array") {
           coerceSpecificType(t);
         }
       }
@@ -1789,7 +1789,7 @@ var require_defaults = __commonJS({
     }
     exports.assignDefaults = assignDefaults;
     function assignDefault(it, prop, defaultValue) {
-      const { gen, compositeRule, data, opts } = it;
+      const { gen, compositeRule, data, opts: opts2 } = it;
       if (defaultValue === void 0)
         return;
       const childData = (0, codegen_1._)`${data}${(0, codegen_1.getProperty)(prop)}`;
@@ -1798,7 +1798,7 @@ var require_defaults = __commonJS({
         return;
       }
       let condition = (0, codegen_1._)`${childData} === undefined`;
-      if (opts.useDefaults === "empty") {
+      if (opts2.useDefaults === "empty") {
         condition = (0, codegen_1._)`${condition} || ${childData} === null || ${childData} === ""`;
       }
       gen.if(condition, (0, codegen_1._)`${childData} = ${(0, codegen_1.stringify)(defaultValue)}`);
@@ -1824,8 +1824,8 @@ var require_code2 = __commonJS({
       });
     }
     exports.checkReportMissingProp = checkReportMissingProp;
-    function checkMissingProp({ gen, data, it: { opts } }, properties, missing) {
-      return (0, codegen_1.or)(...properties.map((prop) => (0, codegen_1.and)(noPropertyInData(gen, data, prop, opts.ownProperties), (0, codegen_1._)`${missing} = ${prop}`)));
+    function checkMissingProp({ gen, data, it: { opts: opts2 } }, properties, missing) {
+      return (0, codegen_1.or)(...properties.map((prop) => (0, codegen_1.and)(noPropertyInData(gen, data, prop, opts2.ownProperties), (0, codegen_1._)`${missing} = ${prop}`)));
     }
     exports.checkMissingProp = checkMissingProp;
     function reportMissingProp(cxt, missing) {
@@ -1878,9 +1878,9 @@ var require_code2 = __commonJS({
     }
     exports.callValidateCode = callValidateCode;
     var newRegExp = (0, codegen_1._)`new RegExp`;
-    function usePattern({ gen, it: { opts } }, pattern) {
-      const u = opts.unicodeRegExp ? "u" : "";
-      const { regExp } = opts.code;
+    function usePattern({ gen, it: { opts: opts2 } }, pattern) {
+      const u = opts2.unicodeRegExp ? "u" : "";
+      const { regExp } = opts2.code;
       const rx = regExp(pattern, u);
       return gen.scopeValue("pattern", {
         key: rx.toString(),
@@ -2034,7 +2034,7 @@ var require_keyword = __commonJS({
       return !schemaType.length || schemaType.some((st) => st === "array" ? Array.isArray(schema2) : st === "object" ? schema2 && typeof schema2 == "object" && !Array.isArray(schema2) : typeof schema2 == st || allowUndefined && typeof schema2 == "undefined");
     }
     exports.validSchemaType = validSchemaType;
-    function validateKeywordUsage({ schema: schema2, opts, self, errSchemaPath }, def, keyword) {
+    function validateKeywordUsage({ schema: schema2, opts: opts2, self, errSchemaPath }, def, keyword) {
       if (Array.isArray(def.keyword) ? !def.keyword.includes(keyword) : def.keyword !== keyword) {
         throw new Error("ajv implementation error");
       }
@@ -2046,7 +2046,7 @@ var require_keyword = __commonJS({
         const valid = def.validateSchema(schema2[keyword]);
         if (!valid) {
           const msg = `keyword "${keyword}" value is invalid at path "${errSchemaPath}": ` + self.errorsText(def.validateSchema.errors);
-          if (opts.validateSchema === "log")
+          if (opts2.validateSchema === "log")
             self.logger.error(msg);
           else
             throw new Error(msg);
@@ -2101,10 +2101,10 @@ var require_subschema = __commonJS({
       }
       const { gen } = it;
       if (dataProp !== void 0) {
-        const { errorPath, dataPathArr, opts } = it;
+        const { errorPath, dataPathArr, opts: opts2 } = it;
         const nextData = gen.let("data", (0, codegen_1._)`${it.data}${(0, codegen_1.getProperty)(dataProp)}`, true);
         dataContextProps(nextData);
-        subschema.errorPath = (0, codegen_1.str)`${errorPath}${(0, util_1.getErrorPath)(dataProp, dpType, opts.jsPropertySyntax)}`;
+        subschema.errorPath = (0, codegen_1.str)`${errorPath}${(0, util_1.getErrorPath)(dataProp, dpType, opts2.jsPropertySyntax)}`;
         subschema.parentDataProperty = (0, codegen_1._)`${dataProp}`;
         subschema.dataPathArr = [...dataPathArr, subschema.parentDataProperty];
       }
@@ -2179,17 +2179,17 @@ var require_fast_deep_equal = __commonJS({
 var require_json_schema_traverse = __commonJS({
   "node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
-    var traverse = module.exports = function(schema2, opts, cb) {
-      if (typeof opts == "function") {
-        cb = opts;
-        opts = {};
+    var traverse = module.exports = function(schema2, opts2, cb) {
+      if (typeof opts2 == "function") {
+        cb = opts2;
+        opts2 = {};
       }
-      cb = opts.cb || cb;
+      cb = opts2.cb || cb;
       var pre = typeof cb == "function" ? cb : cb.pre || function() {
       };
       var post = cb.post || function() {
       };
-      _traverse(opts, pre, post, schema2, "", schema2);
+      _traverse(opts2, pre, post, schema2, "", schema2);
     };
     traverse.keywords = {
       additionalItems: true,
@@ -2235,7 +2235,7 @@ var require_json_schema_traverse = __commonJS({
       maxProperties: true,
       minProperties: true
     };
-    function _traverse(opts, pre, post, schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex) {
+    function _traverse(opts2, pre, post, schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex) {
       if (schema2 && typeof schema2 == "object" && !Array.isArray(schema2)) {
         pre(schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
         for (var key in schema2) {
@@ -2243,15 +2243,15 @@ var require_json_schema_traverse = __commonJS({
           if (Array.isArray(sch)) {
             if (key in traverse.arrayKeywords) {
               for (var i = 0; i < sch.length; i++)
-                _traverse(opts, pre, post, sch[i], jsonPtr + "/" + key + "/" + i, rootSchema, jsonPtr, key, schema2, i);
+                _traverse(opts2, pre, post, sch[i], jsonPtr + "/" + key + "/" + i, rootSchema, jsonPtr, key, schema2, i);
             }
           } else if (key in traverse.propsKeywords) {
             if (sch && typeof sch == "object") {
               for (var prop in sch)
-                _traverse(opts, pre, post, sch[prop], jsonPtr + "/" + key + "/" + escapeJsonPtr(prop), rootSchema, jsonPtr, key, schema2, prop);
+                _traverse(opts2, pre, post, sch[prop], jsonPtr + "/" + key + "/" + escapeJsonPtr(prop), rootSchema, jsonPtr, key, schema2, prop);
             }
-          } else if (key in traverse.keywords || opts.allKeys && !(key in traverse.skipKeywords)) {
-            _traverse(opts, pre, post, sch, jsonPtr + "/" + key, rootSchema, jsonPtr, key, schema2);
+          } else if (key in traverse.keywords || opts2.allKeys && !(key in traverse.skipKeywords)) {
+            _traverse(opts2, pre, post, sch, jsonPtr + "/" + key, rootSchema, jsonPtr, key, schema2);
           }
         }
         post(schema2, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
@@ -2448,46 +2448,46 @@ var require_validate = __commonJS({
       validateFunction(it, () => (0, boolSchema_1.topBoolOrEmptySchema)(it));
     }
     exports.validateFunctionCode = validateFunctionCode;
-    function validateFunction({ gen, validateName, schema: schema2, schemaEnv, opts }, body) {
-      if (opts.code.es5) {
+    function validateFunction({ gen, validateName, schema: schema2, schemaEnv, opts: opts2 }, body) {
+      if (opts2.code.es5) {
         gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${names_1.default.valCxt}`, schemaEnv.$async, () => {
-          gen.code((0, codegen_1._)`"use strict"; ${funcSourceUrl(schema2, opts)}`);
-          destructureValCxtES5(gen, opts);
+          gen.code((0, codegen_1._)`"use strict"; ${funcSourceUrl(schema2, opts2)}`);
+          destructureValCxtES5(gen, opts2);
           gen.code(body);
         });
       } else {
-        gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${destructureValCxt(opts)}`, schemaEnv.$async, () => gen.code(funcSourceUrl(schema2, opts)).code(body));
+        gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${destructureValCxt(opts2)}`, schemaEnv.$async, () => gen.code(funcSourceUrl(schema2, opts2)).code(body));
       }
     }
-    function destructureValCxt(opts) {
-      return (0, codegen_1._)`{${names_1.default.instancePath}="", ${names_1.default.parentData}, ${names_1.default.parentDataProperty}, ${names_1.default.rootData}=${names_1.default.data}${opts.dynamicRef ? (0, codegen_1._)`, ${names_1.default.dynamicAnchors}={}` : codegen_1.nil}}={}`;
+    function destructureValCxt(opts2) {
+      return (0, codegen_1._)`{${names_1.default.instancePath}="", ${names_1.default.parentData}, ${names_1.default.parentDataProperty}, ${names_1.default.rootData}=${names_1.default.data}${opts2.dynamicRef ? (0, codegen_1._)`, ${names_1.default.dynamicAnchors}={}` : codegen_1.nil}}={}`;
     }
-    function destructureValCxtES5(gen, opts) {
+    function destructureValCxtES5(gen, opts2) {
       gen.if(names_1.default.valCxt, () => {
         gen.var(names_1.default.instancePath, (0, codegen_1._)`${names_1.default.valCxt}.${names_1.default.instancePath}`);
         gen.var(names_1.default.parentData, (0, codegen_1._)`${names_1.default.valCxt}.${names_1.default.parentData}`);
         gen.var(names_1.default.parentDataProperty, (0, codegen_1._)`${names_1.default.valCxt}.${names_1.default.parentDataProperty}`);
         gen.var(names_1.default.rootData, (0, codegen_1._)`${names_1.default.valCxt}.${names_1.default.rootData}`);
-        if (opts.dynamicRef)
+        if (opts2.dynamicRef)
           gen.var(names_1.default.dynamicAnchors, (0, codegen_1._)`${names_1.default.valCxt}.${names_1.default.dynamicAnchors}`);
       }, () => {
         gen.var(names_1.default.instancePath, (0, codegen_1._)`""`);
         gen.var(names_1.default.parentData, (0, codegen_1._)`undefined`);
         gen.var(names_1.default.parentDataProperty, (0, codegen_1._)`undefined`);
         gen.var(names_1.default.rootData, names_1.default.data);
-        if (opts.dynamicRef)
+        if (opts2.dynamicRef)
           gen.var(names_1.default.dynamicAnchors, (0, codegen_1._)`{}`);
       });
     }
     function topSchemaObjCode(it) {
-      const { schema: schema2, opts, gen } = it;
+      const { schema: schema2, opts: opts2, gen } = it;
       validateFunction(it, () => {
-        if (opts.$comment && schema2.$comment)
+        if (opts2.$comment && schema2.$comment)
           commentKeyword(it);
         checkNoDefault(it);
         gen.let(names_1.default.vErrors, null);
         gen.let(names_1.default.errors, 0);
-        if (opts.unevaluated)
+        if (opts2.unevaluated)
           resetEvaluated(it);
         typeAndKeywords(it);
         returnResults(it);
@@ -2500,9 +2500,9 @@ var require_validate = __commonJS({
       gen.if((0, codegen_1._)`${it.evaluated}.dynamicProps`, () => gen.assign((0, codegen_1._)`${it.evaluated}.props`, (0, codegen_1._)`undefined`));
       gen.if((0, codegen_1._)`${it.evaluated}.dynamicItems`, () => gen.assign((0, codegen_1._)`${it.evaluated}.items`, (0, codegen_1._)`undefined`));
     }
-    function funcSourceUrl(schema2, opts) {
-      const schId = typeof schema2 == "object" && schema2[opts.schemaId];
-      return schId && (opts.code.source || opts.code.process) ? (0, codegen_1._)`/*# sourceURL=${schId} */` : codegen_1.nil;
+    function funcSourceUrl(schema2, opts2) {
+      const schId = typeof schema2 == "object" && schema2[opts2.schemaId];
+      return schId && (opts2.code.source || opts2.code.process) ? (0, codegen_1._)`/*# sourceURL=${schId} */` : codegen_1.nil;
     }
     function subschemaCode(it, valid) {
       if (isSchemaObj(it)) {
@@ -2526,8 +2526,8 @@ var require_validate = __commonJS({
       return typeof it.schema != "boolean";
     }
     function subSchemaObjCode(it, valid) {
-      const { schema: schema2, gen, opts } = it;
-      if (opts.$comment && schema2.$comment)
+      const { schema: schema2, gen, opts: opts2 } = it;
+      if (opts2.$comment && schema2.$comment)
         commentKeyword(it);
       updateContext(it);
       checkAsyncSchema(it);
@@ -2547,14 +2547,14 @@ var require_validate = __commonJS({
       schemaKeywords(it, types, !checkedTypes, errsCount);
     }
     function checkRefsAndKeywords(it) {
-      const { schema: schema2, errSchemaPath, opts, self } = it;
-      if (schema2.$ref && opts.ignoreKeywordsWithRef && (0, util_1.schemaHasRulesButRef)(schema2, self.RULES)) {
+      const { schema: schema2, errSchemaPath, opts: opts2, self } = it;
+      if (schema2.$ref && opts2.ignoreKeywordsWithRef && (0, util_1.schemaHasRulesButRef)(schema2, self.RULES)) {
         self.logger.warn(`$ref: keywords ignored in schema at path "${errSchemaPath}"`);
       }
     }
     function checkNoDefault(it) {
-      const { schema: schema2, opts } = it;
-      if (schema2.default !== void 0 && opts.useDefaults && opts.strictSchema) {
+      const { schema: schema2, opts: opts2 } = it;
+      if (schema2.default !== void 0 && opts2.useDefaults && opts2.strictSchema) {
         (0, util_1.checkStrictMode)(it, "default is ignored in the schema root");
       }
     }
@@ -2567,23 +2567,23 @@ var require_validate = __commonJS({
       if (it.schema.$async && !it.schemaEnv.$async)
         throw new Error("async schema in sync schema");
     }
-    function commentKeyword({ gen, schemaEnv, schema: schema2, errSchemaPath, opts }) {
+    function commentKeyword({ gen, schemaEnv, schema: schema2, errSchemaPath, opts: opts2 }) {
       const msg = schema2.$comment;
-      if (opts.$comment === true) {
+      if (opts2.$comment === true) {
         gen.code((0, codegen_1._)`${names_1.default.self}.logger.log(${msg})`);
-      } else if (typeof opts.$comment == "function") {
+      } else if (typeof opts2.$comment == "function") {
         const schemaPath = (0, codegen_1.str)`${errSchemaPath}/$comment`;
         const rootName = gen.scopeValue("root", { ref: schemaEnv.root });
         gen.code((0, codegen_1._)`${names_1.default.self}.opts.$comment(${msg}, ${schemaPath}, ${rootName}.schema)`);
       }
     }
     function returnResults(it) {
-      const { gen, schemaEnv, validateName, ValidationError, opts } = it;
+      const { gen, schemaEnv, validateName, ValidationError, opts: opts2 } = it;
       if (schemaEnv.$async) {
         gen.if((0, codegen_1._)`${names_1.default.errors} === 0`, () => gen.return(names_1.default.data), () => gen.throw((0, codegen_1._)`new ${ValidationError}(${names_1.default.vErrors})`));
       } else {
         gen.assign((0, codegen_1._)`${validateName}.errors`, names_1.default.vErrors);
-        if (opts.unevaluated)
+        if (opts2.unevaluated)
           assignEvaluated(it);
         gen.return((0, codegen_1._)`${names_1.default.errors} === 0`);
       }
@@ -2595,13 +2595,13 @@ var require_validate = __commonJS({
         gen.assign((0, codegen_1._)`${evaluated}.items`, items);
     }
     function schemaKeywords(it, types, typeErrors, errsCount) {
-      const { gen, schema: schema2, data, allErrors, opts, self } = it;
+      const { gen, schema: schema2, data, allErrors, opts: opts2, self } = it;
       const { RULES } = self;
-      if (schema2.$ref && (opts.ignoreKeywordsWithRef || !(0, util_1.schemaHasRulesButRef)(schema2, RULES))) {
+      if (schema2.$ref && (opts2.ignoreKeywordsWithRef || !(0, util_1.schemaHasRulesButRef)(schema2, RULES))) {
         gen.block(() => keywordCode(it, "$ref", RULES.all.$ref.definition));
         return;
       }
-      if (!opts.jtd)
+      if (!opts2.jtd)
         checkStrictTypes(it, types);
       gen.block(() => {
         for (const group of RULES.rules)
@@ -2612,7 +2612,7 @@ var require_validate = __commonJS({
         if (!(0, applicability_1.shouldUseGroup)(schema2, group))
           return;
         if (group.type) {
-          gen.if((0, dataType_2.checkDataType)(group.type, data, opts.strictNumbers));
+          gen.if((0, dataType_2.checkDataType)(group.type, data, opts2.strictNumbers));
           iterateKeywords(it, group);
           if (types.length === 1 && types[0] === group.type && typeErrors) {
             gen.else();
@@ -2973,20 +2973,20 @@ var require_compile = __commonJS({
     var util_1 = require_util();
     var validate_1 = require_validate();
     var SchemaEnv = class {
-      constructor(env2) {
+      constructor(env3) {
         var _a3;
         this.refs = {};
         this.dynamicAnchors = {};
         let schema2;
-        if (typeof env2.schema == "object")
-          schema2 = env2.schema;
-        this.schema = env2.schema;
-        this.schemaId = env2.schemaId;
-        this.root = env2.root || this;
-        this.baseId = (_a3 = env2.baseId) !== null && _a3 !== void 0 ? _a3 : (0, resolve_1.normalizeId)(schema2 === null || schema2 === void 0 ? void 0 : schema2[env2.schemaId || "$id"]);
-        this.schemaPath = env2.schemaPath;
-        this.localRefs = env2.localRefs;
-        this.meta = env2.meta;
+        if (typeof env3.schema == "object")
+          schema2 = env3.schema;
+        this.schema = env3.schema;
+        this.schemaId = env3.schemaId;
+        this.root = env3.root || this;
+        this.baseId = (_a3 = env3.baseId) !== null && _a3 !== void 0 ? _a3 : (0, resolve_1.normalizeId)(schema2 === null || schema2 === void 0 ? void 0 : schema2[env3.schemaId || "$id"]);
+        this.schemaPath = env3.schemaPath;
+        this.localRefs = env3.localRefs;
+        this.meta = env3.meta;
         this.$async = schema2 === null || schema2 === void 0 ? void 0 : schema2.$async;
         this.refs = {};
       }
@@ -3170,15 +3170,15 @@ var require_compile = __commonJS({
           baseId = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schId);
         }
       }
-      let env2;
+      let env3;
       if (typeof schema2 != "boolean" && schema2.$ref && !(0, util_1.schemaHasRulesButRef)(schema2, this.RULES)) {
         const $ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schema2.$ref);
-        env2 = resolveSchema.call(this, root, $ref);
+        env3 = resolveSchema.call(this, root, $ref);
       }
       const { schemaId } = this.opts;
-      env2 = env2 || new SchemaEnv({ schema: schema2, schemaId, root, baseId });
-      if (env2.schema !== env2.root.schema)
-        return env2;
+      env3 = env3 || new SchemaEnv({ schema: schema2, schemaId, root, baseId });
+      if (env3.schema !== env3.root.schema)
+        return env3;
       return void 0;
     }
   }
@@ -4032,7 +4032,7 @@ var require_fast_uri = __commonJS({
       const normalizedB = normalizeComparableURI(uriB, options);
       return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA === normalizedB;
     }
-    function serialize(cmpts, opts) {
+    function serialize(cmpts, opts2) {
       const component = {
         host: cmpts.host,
         scheme: cmpts.scheme,
@@ -4049,7 +4049,7 @@ var require_fast_uri = __commonJS({
         secure: cmpts.secure,
         error: ""
       };
-      const options = Object.assign({}, opts);
+      const options = Object.assign({}, opts2);
       const uriTokens = [];
       if (component.scheme) {
         component.scheme = decodeValidScheme(component.scheme);
@@ -4141,8 +4141,8 @@ var require_fast_uri = __commonJS({
       }
       return false;
     }
-    function parseWithStatus(uri, opts) {
-      const options = Object.assign({}, opts);
+    function parseWithStatus(uri, opts2) {
+      const options = Object.assign({}, opts2);
       const parsed = {
         scheme: void 0,
         userinfo: void 0,
@@ -4277,16 +4277,16 @@ var require_fast_uri = __commonJS({
       }
       return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
     }
-    function parse3(uri, opts) {
-      return parseWithStatus(uri, opts).parsed;
+    function parse3(uri, opts2) {
+      return parseWithStatus(uri, opts2).parsed;
     }
-    function normalizeString(uri, opts) {
-      return normalizeStringWithStatus(uri, opts).normalized;
+    function normalizeString(uri, opts2) {
+      return normalizeStringWithStatus(uri, opts2).normalized;
     }
-    function normalizeStringWithStatus(uri, opts) {
-      const { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = parseWithStatus(uri, opts);
+    function normalizeStringWithStatus(uri, opts2) {
+      const { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = parseWithStatus(uri, opts2);
       return {
-        normalized: malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? uri : serialize(parsed, opts),
+        normalized: malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? uri : serialize(parsed, opts2),
         malformedAuthorityOrPort,
         malformedPercentEncoding,
         malformedSchemeSpecific,
@@ -4294,17 +4294,17 @@ var require_fast_uri = __commonJS({
         malformedScheme
       };
     }
-    function normalizeComparableURI(uri, opts) {
+    function normalizeComparableURI(uri, opts2) {
       if (typeof uri !== "string" && typeof uri !== "object") {
         return void 0;
       }
       let value;
       try {
-        value = typeof uri === "string" ? uri : serialize(uri, opts);
+        value = typeof uri === "string" ? uri : serialize(uri, opts2);
       } catch {
         return void 0;
       }
-      const { normalized, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = normalizeStringWithStatus(value, opts);
+      const { normalized, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = normalizeStringWithStatus(value, opts2);
       return malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? void 0 : normalized;
     }
     var fastUri = {
@@ -4442,33 +4442,33 @@ var require_core = __commonJS({
       };
     }
     var Ajv2 = class {
-      constructor(opts = {}) {
+      constructor(opts2 = {}) {
         this.schemas = {};
         this.refs = {};
         this.formats = /* @__PURE__ */ Object.create(null);
         this._compilations = /* @__PURE__ */ new Set();
         this._loading = {};
         this._cache = /* @__PURE__ */ new Map();
-        opts = this.opts = { ...opts, ...requiredOptions(opts) };
+        opts2 = this.opts = { ...opts2, ...requiredOptions(opts2) };
         const { es5, lines } = this.opts.code;
         this.scope = new codegen_2.ValueScope({ scope: {}, prefixes: EXT_SCOPE_NAMES, es5, lines });
-        this.logger = getLogger(opts.logger);
-        const formatOpt = opts.validateFormats;
-        opts.validateFormats = false;
+        this.logger = getLogger(opts2.logger);
+        const formatOpt = opts2.validateFormats;
+        opts2.validateFormats = false;
         this.RULES = (0, rules_1.getRules)();
-        checkOptions.call(this, removedOptions, opts, "NOT SUPPORTED");
-        checkOptions.call(this, deprecatedOptions, opts, "DEPRECATED", "warn");
+        checkOptions.call(this, removedOptions, opts2, "NOT SUPPORTED");
+        checkOptions.call(this, deprecatedOptions, opts2, "DEPRECATED", "warn");
         this._metaOpts = getMetaSchemaOptions.call(this);
-        if (opts.formats)
+        if (opts2.formats)
           addInitialFormats.call(this);
         this._addVocabularies();
         this._addDefaultMetaSchema();
-        if (opts.keywords)
-          addInitialKeywords.call(this, opts.keywords);
-        if (typeof opts.meta == "object")
-          this.addMetaSchema(opts.meta);
+        if (opts2.keywords)
+          addInitialKeywords.call(this, opts2.keywords);
+        if (typeof opts2.meta == "object")
+          this.addMetaSchema(opts2.meta);
         addInitialSchemas.call(this);
-        opts.validateFormats = formatOpt;
+        opts2.validateFormats = formatOpt;
       }
       _addVocabularies() {
         this.addKeyword("$async");
@@ -4976,8 +4976,8 @@ var require_ref = __commonJS({
       schemaType: "string",
       code(cxt) {
         const { gen, schema: $ref, it } = cxt;
-        const { baseId, schemaEnv: env2, validateName, opts, self } = it;
-        const { root } = env2;
+        const { baseId, schemaEnv: env3, validateName, opts: opts2, self } = it;
+        const { root } = env3;
         if (($ref === "#" || $ref === "#/") && baseId === root.baseId)
           return callRootRef();
         const schOrEnv = compile_1.resolveRef.call(self, root, baseId, $ref);
@@ -4987,8 +4987,8 @@ var require_ref = __commonJS({
           return callValidate(schOrEnv);
         return inlineRefSchema(schOrEnv);
         function callRootRef() {
-          if (env2 === root)
-            return callRef(cxt, validateName, env2, env2.$async);
+          if (env3 === root)
+            return callRef(cxt, validateName, env3, env3.$async);
           const rootName = gen.scopeValue("root", { ref: root });
           return callRef(cxt, (0, codegen_1._)`${rootName}.validate`, root, root.$async);
         }
@@ -4997,7 +4997,7 @@ var require_ref = __commonJS({
           callRef(cxt, v, sch, sch.$async);
         }
         function inlineRefSchema(sch) {
-          const schName = gen.scopeValue("schema", opts.code.source === true ? { ref: sch, code: (0, codegen_1.stringify)(sch) } : { ref: sch });
+          const schName = gen.scopeValue("schema", opts2.code.source === true ? { ref: sch, code: (0, codegen_1.stringify)(sch) } : { ref: sch });
           const valid = gen.name("valid");
           const schCxt = cxt.subschema({
             schema: sch,
@@ -5018,14 +5018,14 @@ var require_ref = __commonJS({
     exports.getValidate = getValidate;
     function callRef(cxt, v, sch, $async) {
       const { gen, it } = cxt;
-      const { allErrors, schemaEnv: env2, opts } = it;
-      const passCxt = opts.passContext ? names_1.default.this : codegen_1.nil;
+      const { allErrors, schemaEnv: env3, opts: opts2 } = it;
+      const passCxt = opts2.passContext ? names_1.default.this : codegen_1.nil;
       if ($async)
         callAsyncRef();
       else
         callSyncRef();
       function callAsyncRef() {
-        if (!env2.$async)
+        if (!env3.$async)
           throw new Error("async schema referenced by sync schema");
         const valid = gen.let("valid");
         gen.try(() => {
@@ -5306,15 +5306,15 @@ var require_required = __commonJS({
       error: error62,
       code(cxt) {
         const { gen, schema: schema2, schemaCode, data, $data, it } = cxt;
-        const { opts } = it;
+        const { opts: opts2 } = it;
         if (!$data && schema2.length === 0)
           return;
-        const useLoop = schema2.length >= opts.loopRequired;
+        const useLoop = schema2.length >= opts2.loopRequired;
         if (it.allErrors)
           allErrorsMode();
         else
           exitOnErrorMode();
-        if (opts.strictRequired) {
+        if (opts2.strictRequired) {
           const props = cxt.parentSchema.properties;
           const { definedProperties } = cxt.it;
           for (const requiredKey of schema2) {
@@ -5349,13 +5349,13 @@ var require_required = __commonJS({
         function loopAllRequired() {
           gen.forOf("prop", schemaCode, (prop) => {
             cxt.setParams({ missingProperty: prop });
-            gen.if((0, code_1.noPropertyInData)(gen, data, prop, opts.ownProperties), () => cxt.error());
+            gen.if((0, code_1.noPropertyInData)(gen, data, prop, opts2.ownProperties), () => cxt.error());
           });
         }
         function loopUntilMissing(missing, valid) {
           cxt.setParams({ missingProperty: missing });
           gen.forOf(missing, schemaCode, () => {
-            gen.assign(valid, (0, code_1.propertyInData)(gen, data, missing, opts.ownProperties));
+            gen.assign(valid, (0, code_1.propertyInData)(gen, data, missing, opts2.ownProperties));
             gen.if((0, codegen_1.not)(valid), () => {
               cxt.error();
               gen.break();
@@ -5687,12 +5687,12 @@ var require_items = __commonJS({
         cxt.ok(valid);
       });
       function checkStrictTuple(sch) {
-        const { opts, errSchemaPath } = it;
+        const { opts: opts2, errSchemaPath } = it;
         const l = schArr.length;
         const fullTuple = l === sch.minItems && (l === sch.maxItems || sch[extraItems] === false);
-        if (opts.strictTuples && !fullTuple) {
+        if (opts2.strictTuples && !fullTuple) {
           const msg = `"${keyword}" is ${l}-tuple, but minItems or maxItems/${extraItems} are not specified or different at path "${errSchemaPath}"`;
-          (0, util_1.checkStrictMode)(it, msg, opts.strictTuples);
+          (0, util_1.checkStrictMode)(it, msg, opts2.strictTuples);
         }
       }
     }
@@ -6008,9 +6008,9 @@ var require_additionalProperties = __commonJS({
         const { gen, schema: schema2, parentSchema, data, errsCount, it } = cxt;
         if (!errsCount)
           throw new Error("ajv implementation error");
-        const { allErrors, opts } = it;
+        const { allErrors, opts: opts2 } = it;
         it.props = true;
-        if (opts.removeAdditional !== "all" && (0, util_1.alwaysValidSchema)(it, schema2))
+        if (opts2.removeAdditional !== "all" && (0, util_1.alwaysValidSchema)(it, schema2))
           return;
         const props = (0, code_1.allSchemaProperties)(parentSchema.properties);
         const patProps = (0, code_1.allSchemaProperties)(parentSchema.patternProperties);
@@ -6043,7 +6043,7 @@ var require_additionalProperties = __commonJS({
           gen.code((0, codegen_1._)`delete ${data}[${key}]`);
         }
         function additionalPropertyCode(key) {
-          if (opts.removeAdditional === "all" || opts.removeAdditional && schema2 === false) {
+          if (opts2.removeAdditional === "all" || opts2.removeAdditional && schema2 === false) {
             deleteAdditional(key);
             return;
           }
@@ -6056,7 +6056,7 @@ var require_additionalProperties = __commonJS({
           }
           if (typeof schema2 == "object" && !(0, util_1.alwaysValidSchema)(it, schema2)) {
             const valid = gen.name("valid");
-            if (opts.removeAdditional === "failing") {
+            if (opts2.removeAdditional === "failing") {
               applyAdditionalSchema(key, valid, false);
               gen.if((0, codegen_1.not)(valid), () => {
                 cxt.reset();
@@ -6163,13 +6163,13 @@ var require_patternProperties = __commonJS({
       schemaType: "object",
       code(cxt) {
         const { gen, schema: schema2, data, parentSchema, it } = cxt;
-        const { opts } = it;
+        const { opts: opts2 } = it;
         const patterns = (0, code_1.allSchemaProperties)(schema2);
         const alwaysValidPatterns = patterns.filter((p) => (0, util_1.alwaysValidSchema)(it, schema2[p]));
         if (patterns.length === 0 || alwaysValidPatterns.length === patterns.length && (!it.opts.unevaluated || it.props === true)) {
           return;
         }
-        const checkProperties = opts.strictSchema && !opts.allowMatchingProperties && parentSchema.properties;
+        const checkProperties = opts2.strictSchema && !opts2.allowMatchingProperties && parentSchema.properties;
         const valid = gen.name("valid");
         if (it.props !== true && !(it.props instanceof codegen_1.Name)) {
           it.props = (0, util_2.evaluatedPropsToName)(gen, it.props);
@@ -6508,8 +6508,8 @@ var require_format = __commonJS({
       error: error62,
       code(cxt, ruleType) {
         const { gen, data, $data, schema: schema2, schemaCode, it } = cxt;
-        const { opts, errSchemaPath, schemaEnv, self } = it;
-        if (!opts.validateFormats)
+        const { opts: opts2, errSchemaPath, schemaEnv, self } = it;
+        if (!opts2.validateFormats)
           return;
         if ($data)
           validate$DataFormat();
@@ -6518,7 +6518,7 @@ var require_format = __commonJS({
         function validate$DataFormat() {
           const fmts = gen.scopeValue("formats", {
             ref: self.formats,
-            code: opts.code.formats
+            code: opts2.code.formats
           });
           const fDef = gen.const("fDef", (0, codegen_1._)`${fmts}[${schemaCode}]`);
           const fType = gen.let("fType");
@@ -6526,7 +6526,7 @@ var require_format = __commonJS({
           gen.if((0, codegen_1._)`typeof ${fDef} == "object" && !(${fDef} instanceof RegExp)`, () => gen.assign(fType, (0, codegen_1._)`${fDef}.type || "string"`).assign(format, (0, codegen_1._)`${fDef}.validate`), () => gen.assign(fType, (0, codegen_1._)`"string"`).assign(format, fDef));
           cxt.fail$data((0, codegen_1.or)(unknownFmt(), invalidFmt()));
           function unknownFmt() {
-            if (opts.strictSchema === false)
+            if (opts2.strictSchema === false)
               return codegen_1.nil;
             return (0, codegen_1._)`${schemaCode} && !${format}`;
           }
@@ -6548,7 +6548,7 @@ var require_format = __commonJS({
           if (fmtType === ruleType)
             cxt.pass(validCondition());
           function unknownFormat() {
-            if (opts.strictSchema === false) {
+            if (opts2.strictSchema === false) {
               self.logger.warn(unknownMsg());
               return;
             }
@@ -6558,7 +6558,7 @@ var require_format = __commonJS({
             }
           }
           function getFormat(fmtDef) {
-            const code = fmtDef instanceof RegExp ? (0, codegen_1.regexpCode)(fmtDef) : opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(schema2)}` : void 0;
+            const code = fmtDef instanceof RegExp ? (0, codegen_1.regexpCode)(fmtDef) : opts2.code.formats ? (0, codegen_1._)`${opts2.code.formats}${(0, codegen_1.getProperty)(schema2)}` : void 0;
             const fmt = gen.scopeValue("formats", { key: schema2, ref: fmtDef, code });
             if (typeof fmtDef == "object" && !(fmtDef instanceof RegExp)) {
               return [fmtDef.type || "string", fmtDef.validate, (0, codegen_1._)`${fmt}.validate`];
@@ -7212,8 +7212,8 @@ var require_limit = __commonJS({
       error: error62,
       code(cxt) {
         const { gen, data, schemaCode, keyword, it } = cxt;
-        const { opts, self } = it;
-        if (!opts.validateFormats)
+        const { opts: opts2, self } = it;
+        if (!opts2.validateFormats)
           return;
         const fCxt = new ajv_1.KeywordCxt(it, self.RULES.all.format.definition, "format");
         if (fCxt.$data)
@@ -7223,7 +7223,7 @@ var require_limit = __commonJS({
         function validate$DataFormat() {
           const fmts = gen.scopeValue("formats", {
             ref: self.formats,
-            code: opts.code.formats
+            code: opts2.code.formats
           });
           const fmt = gen.const("fmt", (0, codegen_1._)`${fmts}[${fCxt.schemaCode}]`);
           cxt.fail$data((0, codegen_1.or)((0, codegen_1._)`typeof ${fmt} != "object"`, (0, codegen_1._)`${fmt} instanceof RegExp`, (0, codegen_1._)`typeof ${fmt}.compare != "function"`, compareCode(fmt)));
@@ -7239,7 +7239,7 @@ var require_limit = __commonJS({
           const fmt = gen.scopeValue("formats", {
             key: format,
             ref: fmtDef,
-            code: opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(format)}` : void 0
+            code: opts2.code.formats ? (0, codegen_1._)`${opts2.code.formats}${(0, codegen_1.getProperty)(format)}` : void 0
           });
           cxt.fail$data(compareCode(fmt));
         }
@@ -7267,15 +7267,15 @@ var require_dist = __commonJS({
     var codegen_1 = require_codegen();
     var fullName = new codegen_1.Name("fullFormats");
     var fastName = new codegen_1.Name("fastFormats");
-    var formatsPlugin = (ajv, opts = { keywords: true }) => {
-      if (Array.isArray(opts)) {
-        addFormats(ajv, opts, formats_1.fullFormats, fullName);
+    var formatsPlugin = (ajv, opts2 = { keywords: true }) => {
+      if (Array.isArray(opts2)) {
+        addFormats(ajv, opts2, formats_1.fullFormats, fullName);
         return ajv;
       }
-      const [formats, exportName] = opts.mode === "fast" ? [formats_1.fastFormats, fastName] : [formats_1.fullFormats, fullName];
-      const list = opts.formats || formats_1.formatNames;
+      const [formats, exportName] = opts2.mode === "fast" ? [formats_1.fastFormats, fastName] : [formats_1.fullFormats, fullName];
+      const list = opts2.formats || formats_1.formatNames;
       addFormats(ajv, list, formats, exportName);
-      if (opts.keywords)
+      if (opts2.keywords)
         (0, limit_1.default)(ajv);
       return ajv;
     };
@@ -7938,8 +7938,8 @@ var Response$1 = class Response$12 {
   #body;
   #init;
   [getResponseCache]() {
-    const cache = this[cacheKey];
-    const liveHeaders = cache && cache[2] instanceof Headers ? cache[2] : void 0;
+    const cache2 = this[cacheKey];
+    const liveHeaders = cache2 && cache2[2] instanceof Headers ? cache2[2] : void 0;
     delete this[cacheKey];
     return this[responseCache] ||= new GlobalResponse(this.#body, liveHeaders ? {
       status: this.#init?.status,
@@ -7967,10 +7967,10 @@ var Response$1 = class Response$12 {
     ];
   }
   get headers() {
-    const cache = this[cacheKey];
-    if (cache) {
-      if (!(cache[2] instanceof Headers)) cache[2] = new Headers(cache[2] || (cache[1] === null ? void 0 : { "content-type": defaultContentType }));
-      return cache[2];
+    const cache2 = this[cacheKey];
+    if (cache2) {
+      if (!(cache2[2] instanceof Headers)) cache2[2] = new Headers(cache2[2] || (cache2[1] === null ? void 0 : { "content-type": defaultContentType }));
+      return cache2[2];
     }
     return this[getResponseCache]().headers;
   }
@@ -8424,15 +8424,15 @@ var CONNECTION_SYMBOL_KEY = Symbol("CONNECTION_SYMBOL_KEY");
 var WAIT_FOR_WEBSOCKET_SYMBOL = Symbol("WAIT_FOR_WEBSOCKET_SYMBOL");
 var upgradeWebSocket = defineWebSocketHelper(async (c, events, options) => {
   if (c.req.header("upgrade")?.toLowerCase() !== "websocket") return;
-  const env2 = c.env;
-  const waitForWebSocket = env2[WAIT_FOR_WEBSOCKET_SYMBOL];
-  if (!waitForWebSocket || !env2.incoming) return new Response(null, { status: 500 });
+  const env3 = c.env;
+  const waitForWebSocket = env3[WAIT_FOR_WEBSOCKET_SYMBOL];
+  if (!waitForWebSocket || !env3.incoming) return new Response(null, { status: 500 });
   const connectionSymbol = generateConnectionSymbol();
-  env2[CONNECTION_SYMBOL_KEY] = connectionSymbol;
+  env3[CONNECTION_SYMBOL_KEY] = connectionSymbol;
   (async () => {
     let ws;
     try {
-      ws = await waitForWebSocket(env2.incoming, connectionSymbol);
+      ws = await waitForWebSocket(env3.incoming, connectionSymbol);
     } catch {
       return;
     }
@@ -8451,8 +8451,8 @@ var upgradeWebSocket = defineWebSocketHelper(async (c, events, options) => {
       get readyState() {
         return ws.readyState;
       },
-      send(source, opts) {
-        ws.send(source, { compress: opts?.compress });
+      send(source, opts2) {
+        ws.send(source, { compress: opts2?.compress });
       },
       url: new URL(c.req.url)
     };
@@ -10600,10 +10600,10 @@ function time(args) {
   return new RegExp(`^${timeSource(args)}$`);
 }
 function datetime(args) {
-  const opts = ["Z"];
+  const opts2 = ["Z"];
   if (args.offset)
-    opts.push(`([+-](?:[01]\\d|2[0-3]):[0-5]\\d)`);
-  const qualified = `${timeSource({ precision: args.precision, seconds: true })}(?:${opts.join("|")})`;
+    opts2.push(`([+-](?:[01]\\d|2[0-3]):[0-5]\\d)`);
+  const qualified = `${timeSource({ precision: args.precision, seconds: true })}(?:${opts2.join("|")})`;
   const timeRegex2 = args.local ? `${qualified}|${timeSource({ precision: args.precision })}` : qualified;
   return new RegExp(`^${dateSource}T(?:${timeRegex2})$`);
 }
@@ -14541,8 +14541,8 @@ var error5 = () => {
         return `${issue2.origin} \u098F \u0985\u09AC\u09C8\u09A7 \u0995\u09C0`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `\u0985\u09AC\u09C8\u09A7 \u09A1\u09BF\u09B8\u0995\u09CD\u09B0\u09BF\u09AE\u09BF\u09A8\u09C7\u099F\u09B0 \u09AE\u09BE\u09A8\u0964 \u09AA\u09CD\u09B0\u09A4\u09CD\u09AF\u09BE\u09B6\u09BF\u09A4 ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `\u0985\u09AC\u09C8\u09A7 \u09A1\u09BF\u09B8\u0995\u09CD\u09B0\u09BF\u09AE\u09BF\u09A8\u09C7\u099F\u09B0 \u09AE\u09BE\u09A8\u0964 \u09AA\u09CD\u09B0\u09A4\u09CD\u09AF\u09BE\u09B6\u09BF\u09A4 ${opts2}`;
         }
         return "\u0985\u09AC\u09C8\u09A7 \u0987\u09A8\u09AA\u09C1\u099F";
       case "invalid_element":
@@ -14788,8 +14788,8 @@ var error7 = () => {
         return `\u06A9\u0644\u06CC\u0644\u06CC \u0646\u0627\u062F\u0631\u0648\u0633\u062A \u0644\u06D5 ${issue2.origin}`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `\u0628\u06D5\u0647\u0627\u06CC \u0646\u06D5\u0646\u0627\u0633\u0631\u0627\u0648 \u0647\u06D5\u06CC\u06D5. \u0628\u06D5\u0647\u0627\u06CC \u0686\u0627\u0648\u06D5\u0695\u0648\u0627\u0646\u06A9\u0631\u0627\u0648: ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `\u0628\u06D5\u0647\u0627\u06CC \u0646\u06D5\u0646\u0627\u0633\u0631\u0627\u0648 \u0647\u06D5\u06CC\u06D5. \u0628\u06D5\u0647\u0627\u06CC \u0686\u0627\u0648\u06D5\u0695\u0648\u0627\u0646\u06A9\u0631\u0627\u0648: ${opts2}`;
         }
         return "\u06CC\u06D5\u06A9\u06AF\u0631\u062A\u0646\u06CC \u0646\u0627\u062F\u0631\u0648\u0633\u062A";
       case "invalid_element":
@@ -15375,8 +15375,8 @@ var error12 = () => {
         return `Invalid key in ${issue2.origin}`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `Invalid discriminator value. Expected ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `Invalid discriminator value. Expected ${opts2}`;
         }
         if (issue2.inclusive === false) {
           return "Invalid input: more than one option matched";
@@ -16225,8 +16225,8 @@ var error19 = () => {
         return `${issue2.origin} \u0AAE\u0ABE\u0A82 \u0A85\u0AAE\u0ABE\u0AA8\u0ACD\u0AAF \u0A95\u0AC0`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `\u0A85\u0AAE\u0ABE\u0AA8\u0ACD\u0AAF \u0AA1\u0ABF\u0AB8\u0ACD\u0A95\u0ACD\u0AB0\u0ABF\u0AAE\u0ABF\u0AA8\u0AC7\u0A9F\u0AB0 \u0AAE\u0AC2\u0AB2\u0ACD\u0AAF. \u0A85\u0AAA\u0AC7\u0A95\u0ACD\u0AB7\u0ABF\u0AA4 ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `\u0A85\u0AAE\u0ABE\u0AA8\u0ACD\u0AAF \u0AA1\u0ABF\u0AB8\u0ACD\u0A95\u0ACD\u0AB0\u0ABF\u0AAE\u0ABF\u0AA8\u0AC7\u0A9F\u0AB0 \u0AAE\u0AC2\u0AB2\u0ACD\u0AAF. \u0A85\u0AAA\u0AC7\u0A95\u0ACD\u0AB7\u0ABF\u0AA4 ${opts2}`;
         }
         return "\u0A85\u0AAE\u0ABE\u0AA8\u0ACD\u0AAF \u0A87\u0AA8\u0AAA\u0AC1\u0A9F";
       case "invalid_element":
@@ -16539,8 +16539,8 @@ var error21 = () => {
         return `\u0905\u092E\u093E\u0928\u094D\u092F \u0915\u0941\u0902\u091C\u0940: ${issue2.origin} \u092E\u0947\u0902`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `\u0905\u092E\u093E\u0928\u094D\u092F \u0921\u093F\u0938\u094D\u0915\u094D\u0930\u093F\u092E\u093F\u0928\u0947\u091F\u0930 \u092E\u093E\u0928: \u0905\u092A\u0947\u0915\u094D\u0937\u093F\u0924 ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `\u0905\u092E\u093E\u0928\u094D\u092F \u0921\u093F\u0938\u094D\u0915\u094D\u0930\u093F\u092E\u093F\u0928\u0947\u091F\u0930 \u092E\u093E\u0928: \u0905\u092A\u0947\u0915\u094D\u0937\u093F\u0924 ${opts2}`;
         }
         return "\u0905\u092E\u093E\u0928\u094D\u092F \u0907\u0928\u092A\u0941\u091F";
       case "invalid_element":
@@ -17748,8 +17748,8 @@ var error31 = () => {
         return `\u0C85\u0CAE\u0CBE\u0CA8\u0CCD\u0CAF\u0CB5\u0CBE\u0CA6 \u0C95\u0CC0 \u0C87\u0CA8\u0CCD ${issue2.origin}`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `\u0C85\u0CAE\u0CBE\u0CA8\u0CCD\u0CAF \u0CA4\u0CBE\u0CB0\u0CA4\u0CAE\u0CCD\u0CAF \u0CAE\u0CCC\u0CB2\u0CCD\u0CAF. \u0CA8\u0CBF\u0CB0\u0CC0\u0C95\u0CCD\u0CB7\u0CBF\u0CB8\u0CB2\u0CBE\u0C97\u0CBF\u0CA6\u0CC6 ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `\u0C85\u0CAE\u0CBE\u0CA8\u0CCD\u0CAF \u0CA4\u0CBE\u0CB0\u0CA4\u0CAE\u0CCD\u0CAF \u0CAE\u0CCC\u0CB2\u0CCD\u0CAF. \u0CA8\u0CBF\u0CB0\u0CC0\u0C95\u0CCD\u0CB7\u0CBF\u0CB8\u0CB2\u0CBE\u0C97\u0CBF\u0CA6\u0CC6 ${opts2}`;
         }
         return "\u0C85\u0CAE\u0CBE\u0CA8\u0CCD\u0CAF \u0C87\u0CA8\u0CCD\u200C\u0CAA\u0CC1\u0C9F\u0CCD";
       case "invalid_element":
@@ -18413,8 +18413,8 @@ var error36 = () => {
         return `\u0905\u092E\u093E\u0928\u094D\u092F \u0915\u0941\u091E\u094D\u091C\u0940: ${issue2.origin} \u092E\u093E`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `\u0905\u092E\u093E\u0928\u094D\u092F \u0921\u093F\u0938\u094D\u0915\u094D\u0930\u093F\u092E\u093F\u0928\u0947\u091F\u0930 \u092E\u093E\u0928: \u0905\u092A\u0947\u0915\u094D\u0937\u093F\u0924 ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `\u0905\u092E\u093E\u0928\u094D\u092F \u0921\u093F\u0938\u094D\u0915\u094D\u0930\u093F\u092E\u093F\u0928\u0947\u091F\u0930 \u092E\u093E\u0928: \u0905\u092A\u0947\u0915\u094D\u0937\u093F\u0924 ${opts2}`;
         }
         return "\u0905\u092E\u093E\u0928\u094D\u092F \u0907\u0928\u092A\u0941\u091F";
       case "invalid_element":
@@ -19251,8 +19251,8 @@ var error43 = () => {
         return `Entrada inv\xE1lida n${translateOriginWithArticle(issue2.origin, "definite")}`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `Valor de discrimina\xE7\xE3o inv\xE1lido. Esperava ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `Valor de discrimina\xE7\xE3o inv\xE1lido. Esperava ${opts2}`;
         }
         return "Entrada inv\xE1lida";
       case "invalid_element":
@@ -19396,8 +19396,8 @@ var error44 = () => {
         return `Entrada inv\xE1lida n${translateOriginWithArticle(issue2.origin, "definite")}`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `Valor de discrimina\xE7\xE3o inv\xE1lido. Esperava ${opts}`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `Valor de discrimina\xE7\xE3o inv\xE1lido. Esperava ${opts2}`;
         }
         return "Entrada inv\xE1lida";
       case "invalid_element":
@@ -20269,8 +20269,8 @@ var error51 = () => {
         return `\u041A\u0430\u043B\u0438\u0434\u0438 \u043D\u043E\u0434\u0443\u0440\u0443\u0441\u0442 \u0434\u0430\u0440 ${issue2.origin}`;
       case "invalid_union":
         if (issue2.options && Array.isArray(issue2.options) && issue2.options.length > 0) {
-          const opts = issue2.options.map((o) => `'${o}'`).join(" | ");
-          return `\u049A\u0438\u043C\u0430\u0442\u0438 \u043D\u043E\u0434\u0443\u0440\u0443\u0441\u0442\u0438 \u0434\u0438\u0441\u043A\u0440\u0438\u043C\u0438\u043D\u0430\u0442\u043E\u0440: ${opts} \u0438\u043D\u0442\u0438\u0437\u043E\u0440 \u043C\u0435\u0440\u0430\u0444\u0442`;
+          const opts2 = issue2.options.map((o) => `'${o}'`).join(" | ");
+          return `\u049A\u0438\u043C\u0430\u0442\u0438 \u043D\u043E\u0434\u0443\u0440\u0443\u0441\u0442\u0438 \u0434\u0438\u0441\u043A\u0440\u0438\u043C\u0438\u043D\u0430\u0442\u043E\u0440: ${opts2} \u0438\u043D\u0442\u0438\u0437\u043E\u0440 \u043C\u0435\u0440\u0430\u0444\u0442`;
         }
         return "\u0412\u0443\u0440\u0443\u0434\u0438 \u043D\u043E\u0434\u0443\u0440\u0443\u0441\u0442";
       case "invalid_element":
@@ -28022,21 +28022,21 @@ function visit(schema2, fnOrHandlers) {
     const h = fnOrHandlers[node2._zod.def.type];
     return h ? h(node2, rewritten) : node2;
   };
-  const cache = /* @__PURE__ */ new Map();
+  const cache2 = /* @__PURE__ */ new Map();
   function run(s) {
-    const cached2 = cache.get(s);
+    const cached2 = cache2.get(s);
     if (cached2 === RESOLVING) {
       return new $ZodLazy({
         type: "lazy",
-        getter: () => cache.get(s)
+        getter: () => cache2.get(s)
       });
     }
     if (cached2 !== void 0)
       return cached2;
-    cache.set(s, RESOLVING);
+    cache2.set(s, RESOLVING);
     const inner = mapInner(s);
     const mapped = fn(inner, inner !== s);
-    cache.set(s, mapped);
+    cache2.set(s, mapped);
     return mapped;
   }
   function mapInner(s) {
@@ -31479,11 +31479,11 @@ function timeRegex(args) {
 }
 function datetimeRegex(args) {
   let regex = `${dateRegexSource}T${timeRegexSource(args)}`;
-  const opts = [];
-  opts.push(args.local ? `Z?` : `Z`);
+  const opts2 = [];
+  opts2.push(args.local ? `Z?` : `Z`);
   if (args.offset)
-    opts.push(`([+-]\\d{2}:?\\d{2})`);
-  regex = `${regex}(${opts.join("|")})`;
+    opts2.push(`([+-]\\d{2}:?\\d{2})`);
+  regex = `${regex}(${opts2.join("|")})`;
   return new RegExp(`^${regex}$`);
 }
 function isValidIP(ip, version2) {
@@ -36034,16 +36034,16 @@ function mapMiniTarget(t) {
     return "draft-2020-12";
   return "draft-7";
 }
-function toJsonSchemaCompat(schema2, opts) {
+function toJsonSchemaCompat(schema2, opts2) {
   if (isZ4Schema(schema2)) {
     return toJSONSchema(schema2, {
-      target: mapMiniTarget(opts?.target),
-      io: opts?.pipeStrategy ?? "input"
+      target: mapMiniTarget(opts2?.target),
+      io: opts2?.pipeStrategy ?? "input"
     });
   }
   return zodToJsonSchema(schema2, {
-    strictUnions: opts?.strictUnions ?? true,
-    pipeStrategy: opts?.pipeStrategy ?? "input"
+    strictUnions: opts2?.strictUnions ?? true,
+    pipeStrategy: opts2?.pipeStrategy ?? "input"
   });
 }
 function getMethodLiteral(schema2) {
@@ -36311,13 +36311,13 @@ var Protocol = class {
     const capturedTransport = this._transport;
     const relatedTaskId = request.params?._meta?.[RELATED_TASK_META_KEY]?.taskId;
     const sessionId = capturedTransport?.sessionId;
-    const store = this._taskStore;
+    const store2 = this._taskStore;
     let relatedTaskFound = true;
     let relatedTaskLookup;
-    if (relatedTaskId && store && this._taskMessageQueue && sessionId !== void 0) {
+    if (relatedTaskId && store2 && this._taskMessageQueue && sessionId !== void 0) {
       relatedTaskFound = false;
       relatedTaskLookup = (async () => {
-        if (!await store.getTask(relatedTaskId, sessionId)) {
+        if (!await store2.getTask(relatedTaskId, sessionId)) {
           throw new McpError(ErrorCode.InvalidParams, `Task not found: ${relatedTaskId}`);
         }
         relatedTaskFound = true;
@@ -38743,6 +38743,11 @@ function normId(input2) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
+// dist/core.js
+import { appendFileSync, mkdirSync, readFileSync as readFileSync2, writeFileSync, existsSync as existsSync2 } from "node:fs";
+import { join } from "node:path";
+import { randomBytes, createHash, createHmac, timingSafeEqual } from "node:crypto";
+
 // dist/format.js
 var plain = (rt2) => (rt2 || []).map((t) => t.plain_text ?? t.text?.content ?? "").join("");
 function titleOf(obj) {
@@ -38908,9 +38913,9 @@ function buildProps(schema2, values) {
       case "select":
       case "status": {
         if (v != null) {
-          const opts = (def[t]?.options || []).map((o) => o.name);
-          if (opts.length && !opts.includes(String(v)))
-            throw new Error(`"${name}"\uC5D0 \uC5C6\uB294 \uAC12 "${v}". \uD5C8\uC6A9: ${opts.join(" / ")}`);
+          const opts2 = (def[t]?.options || []).map((o) => o.name);
+          if (opts2.length && !opts2.includes(String(v)))
+            throw new Error(`"${name}"\uC5D0 \uC5C6\uB294 \uAC12 "${v}". \uD5C8\uC6A9: ${opts2.join(" / ")}`);
         }
         out[name] = { [t]: v == null ? null : { name: String(v) } };
         break;
@@ -39060,11 +39065,11 @@ function stripDeep(b) {
 async function blocksToMd(blockId, depth = 0, maxDepth = 3, budget = { n: 0, max: 1500 }) {
   const blocks = await paginate("GET", `/blocks/${blockId}/children`, {}, 2e3);
   const lines = [];
-  const pad = "  ".repeat(depth);
+  const pad2 = "  ".repeat(depth);
   let num = 0;
   for (const b of blocks) {
     if (budget.n++ >= budget.max) {
-      lines.push(`${pad}\u2026(\uBE14\uB85D ${budget.max}\uAC1C \uCD08\uACFC, \uC0DD\uB7B5)`);
+      lines.push(`${pad2}\u2026(\uBE14\uB85D ${budget.max}\uAC1C \uCD08\uACFC, \uC0DD\uB7B5)`);
       break;
     }
     const t = b.type;
@@ -39073,7 +39078,7 @@ async function blocksToMd(blockId, depth = 0, maxDepth = 3, budget = { n: 0, max
     num = t === "numbered_list_item" ? num + 1 : 0;
     switch (t) {
       case "paragraph":
-        lines.push(pad + text);
+        lines.push(pad2 + text);
         break;
       case "heading_1":
         lines.push(`# ${text}`);
@@ -39086,16 +39091,16 @@ async function blocksToMd(blockId, depth = 0, maxDepth = 3, budget = { n: 0, max
         lines.push(`### ${text}`);
         break;
       case "bulleted_list_item":
-        lines.push(`${pad}- ${text}`);
+        lines.push(`${pad2}- ${text}`);
         break;
       case "numbered_list_item":
-        lines.push(`${pad}${num}. ${text}`);
+        lines.push(`${pad2}${num}. ${text}`);
         break;
       case "to_do":
-        lines.push(`${pad}- [${d.checked ? "x" : " "}] ${text}`);
+        lines.push(`${pad2}- [${d.checked ? "x" : " "}] ${text}`);
         break;
       case "toggle":
-        lines.push(`${pad}\u25B8 ${text}`);
+        lines.push(`${pad2}\u25B8 ${text}`);
         break;
       case "quote":
         lines.push(`> ${text}`);
@@ -39110,13 +39115,13 @@ async function blocksToMd(blockId, depth = 0, maxDepth = 3, budget = { n: 0, max
         lines.push("---");
         break;
       case "child_page":
-        lines.push(`${pad}\u{1F4C4} [\uD558\uC704 \uD398\uC774\uC9C0] ${d.title} (id: ${b.id})`);
+        lines.push(`${pad2}\u{1F4C4} [\uD558\uC704 \uD398\uC774\uC9C0] ${d.title} (id: ${b.id})`);
         break;
       case "child_database":
-        lines.push(`${pad}\u{1F5C2} [\uD558\uC704 DB] ${d.title} (id: ${b.id})`);
+        lines.push(`${pad2}\u{1F5C2} [\uD558\uC704 DB] ${d.title} (id: ${b.id})`);
         break;
       case "link_to_page":
-        lines.push(`${pad}\u{1F517} ${d.page_id || d.database_id || ""}`);
+        lines.push(`${pad2}\u{1F517} ${d.page_id || d.database_id || ""}`);
         break;
       case "table": {
         const rows = await paginate("GET", `/blocks/${b.id}/children`);
@@ -39130,13 +39135,13 @@ async function blocksToMd(blockId, depth = 0, maxDepth = 3, budget = { n: 0, max
       case "bookmark":
       case "embed":
       case "link_preview":
-        lines.push(`${pad}${d.url}`);
+        lines.push(`${pad2}${d.url}`);
         break;
       case "image":
       case "file":
       case "pdf":
       case "video":
-        lines.push(`${pad}[${t}] ${d.external?.url || d.file?.url || ""}`);
+        lines.push(`${pad2}[${t}] ${d.external?.url || d.file?.url || ""}`);
         break;
       case "equation":
         lines.push(`$$${d.expression}$$`);
@@ -39146,25 +39151,22 @@ async function blocksToMd(blockId, depth = 0, maxDepth = 3, budget = { n: 0, max
       case "column":
         break;
       case "unsupported":
-        lines.push(`${pad}(\uC9C0\uC6D0 \uC548 \uB418\uB294 \uBE14\uB85D)`);
+        lines.push(`${pad2}(\uC9C0\uC6D0 \uC548 \uB418\uB294 \uBE14\uB85D)`);
         break;
       default:
-        lines.push(`${pad}(${t}) ${text}`);
+        lines.push(`${pad2}(${t}) ${text}`);
     }
     if (b.has_children && !["child_page", "child_database", "table"].includes(t)) {
       if (depth < maxDepth)
         lines.push(await blocksToMd(b.id, ["synced_block", "column_list", "column"].includes(t) ? depth : depth + 1, maxDepth, budget));
       else
-        lines.push(`${pad}  \u2026(\uD558\uC704 \uBE14\uB85D \uC0DD\uB7B5, id: ${b.id})`);
+        lines.push(`${pad2}  \u2026(\uD558\uC704 \uBE14\uB85D \uC0DD\uB7B5, id: ${b.id})`);
     }
   }
   return lines.filter((l) => l !== "").join("\n");
 }
 
 // dist/core.js
-import { appendFileSync, mkdirSync, readFileSync as readFileSync2, writeFileSync, existsSync as existsSync2 } from "node:fs";
-import { join } from "node:path";
-import { randomBytes, createHash, createHmac, timingSafeEqual } from "node:crypto";
 var env = (k, d) => process.env[k] || d;
 var IDS = {
   rules: env("WOOS_RULES_PAGE_ID", "3c92d174-b03c-81c3-bff4-c95cb9ef0585"),
@@ -39203,7 +39205,6 @@ var PROTECTED = new Set([
   IDS.chorong,
   ...(process.env.WOOS_PROTECTED_IDS || "").split(",").filter(Boolean)
 ].map((x) => normId(x)));
-var RULE_DOCS = new Set([IDS.rules, IDS.rulesExec, IDS.rulesIdentity, IDS.rulesDev].map(normId));
 var STATE_DIR = process.env.WOOS_MCP_STATE_DIR || (process.env.VERCEL ? "/tmp/woos-memoryhub-mcp" : join(process.env.LOCALAPPDATA || process.env.HOME || ".", "woos-memoryhub-mcp"));
 mkdirSync(STATE_DIR, { recursive: true });
 function audit(entry) {
@@ -39310,10 +39311,6 @@ async function owningPage(blockId) {
   }
   return null;
 }
-function assertNotRuleDoc(pageId) {
-  if (RULE_DOCS.has(normId(pageId)))
-    throw new Error("\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C\uB294 \uC77C\uBC18 \uC4F0\uAE30 \uB3C4\uAD6C\uB85C \uC218\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC9C0\uC2DC\uAC00 \uC788\uC744 \uB54C rules_update \uB3C4\uAD6C\uB97C \uC0AC\uC6A9\uD558\uC138\uC694.");
-}
 var PENDING_FILE = join(STATE_DIR, "trash-pending.json");
 function loadPending() {
   try {
@@ -39363,6 +39360,346 @@ function takePending(token2) {
   if (Date.now() - p.created > TRASH_TTL_MS)
     throw new Error("\uC2B9\uC778 \uD1A0\uD070\uC774 \uB9CC\uB8CC\uB410\uC2B5\uB2C8\uB2E4(30\uBD84). trash_prepare\uBD80\uD130 \uB2E4\uC2DC \uD558\uC138\uC694.");
   return p;
+}
+
+// dist/policy.js
+var DEFAULTS = {
+  workdayStart: { h: 9, m: 0 },
+  // 초롱이 세팅 문장을 못 읽을 때만 사용
+  dadOnlyPriorities: ["\uCD5C\uC0C1", "\uCD5C\uD558"],
+  // 운영규칙 문장을 못 읽을 때만 사용
+  projectPrefix: true
+};
+var STATUS_NAMES = {
+  done: process.env.WOOS_STATUS_DONE || "\uC644\uB8CC",
+  doing: process.env.WOOS_STATUS_DOING || "\uC9C4\uD589\uC911",
+  waiting: process.env.WOOS_STATUS_WAITING || "\uB300\uAE30",
+  hold: process.env.WOOS_STATUS_HOLD || "\uBCF4\uB958",
+  todo: process.env.WOOS_STATUS_TODO || "\uBBF8\uCC29\uC218"
+};
+var INTERVENTION_NONE = process.env.WOOS_INTERVENTION_NONE || "\uC5C6\uC74C";
+var cache = null;
+var inflight = null;
+var TTL = Number(process.env.WOOS_POLICY_TTL_SEC || 300) * 1e3;
+async function getPolicy(force = false) {
+  if (!force && cache && Date.now() - cache.at < TTL)
+    return cache.p;
+  if (inflight)
+    return inflight;
+  inflight = load().then((p) => {
+    cache = { at: Date.now(), p };
+    return p;
+  }).finally(() => {
+    inflight = null;
+  });
+  return inflight;
+}
+var opts = (prop) => (prop?.select?.options || prop?.multi_select?.options || prop?.status?.options || []).map((o) => o.name);
+function displayName(name) {
+  return name.replace(/^\s*\d+\.\s*/, "").replace(/\s*\(.*\)\s*$/, "").trim();
+}
+async function load() {
+  const fallbacks = [];
+  const sources = {};
+  const ds = await api("GET", `/data_sources/${IDS.taskDs}`);
+  const P = ds.properties;
+  sources.task_schema = `\uC791\uC5C5 \uC6D0\uC7A5 \uB370\uC774\uD130\uC18C\uC2A4 ${IDS.taskDs}`;
+  const statuses = opts(P[PROPS.status]);
+  const priorities = opts(P[PROPS.priority]);
+  const interventions = opts(P[PROPS.intervention]);
+  let rulesMd = "";
+  try {
+    rulesMd = await blocksToMd(IDS.rules, 0, 3, { n: 0, max: 3e3 });
+    sources.rules = `\uC6B4\uC601\uADDC\uCE59 ${IDS.rules}`;
+  } catch (e) {
+    fallbacks.push(`\uC6B4\uC601\uADDC\uCE59 \uC77D\uAE30 \uC2E4\uD328: ${e.message}`);
+  }
+  const ruleDocs = parseRuleDocs(rulesMd);
+  if (!ruleDocs.length)
+    fallbacks.push("\u300C\uACF5\uC6A9 \uADDC\uCE59 \uBB38\uC11C \uBAA9\uB85D\u300D \uD45C\uB97C \uCC3E\uC9C0 \uBABB\uD568 \u2014 \uC6B4\uC601\uADDC\uCE59 \uBCF8\uBB38\uB9CC \uADDC\uCE59 \uBB38\uC11C\uB85C \uCDE8\uAE09");
+  let dadOnly = parseDadOnly(rulesMd, priorities);
+  if (!dadOnly.length) {
+    dadOnly = DEFAULTS.dadOnlyPriorities.filter((x) => priorities.includes(x));
+    fallbacks.push(`\uC544\uBE60 \uC804\uC6A9 \uC6B0\uC120\uC21C\uC704 \uBB38\uC7A5 \uD574\uC11D \uC2E4\uD328 \u2014 \uAE30\uBCF8\uAC12 ${dadOnly.join("/")}`);
+  }
+  let projectPrefix = /`\[프로젝트명\]\s*작업명`/.test(rulesMd);
+  if (!rulesMd) {
+    projectPrefix = DEFAULTS.projectPrefix;
+  } else if (!projectPrefix)
+    fallbacks.push("\uC791\uC5C5\uBA85 `[\uD504\uB85C\uC81D\uD2B8\uBA85] \uC791\uC5C5\uBA85` \uADDC\uCE59 \uBB38\uC7A5\uC744 \uCC3E\uC9C0 \uBABB\uD568 \u2014 \uC811\uB450\uC5B4\uB97C \uBD99\uC774\uC9C0 \uC54A\uC74C");
+  let workdayStart = DEFAULTS.workdayStart;
+  try {
+    const md = await blocksToMd(IDS.chorong, 0, 2, { n: 0, max: 1500 });
+    const m = md.match(/작업일은\s*(\d{1,2})\s*:\s*(\d{2})\s*[~∼〜-]\s*다음\s*날/);
+    if (m) {
+      workdayStart = { h: Number(m[1]), m: Number(m[2]) };
+      sources.workday = `\uCD08\uB871\uC774 \uC138\uD305 ${IDS.chorong}`;
+    } else
+      fallbacks.push(`\uCD08\uB871\uC774 \uC138\uD305\uC5D0\uC11C \uC791\uC5C5\uC77C \uAE30\uC900 \uBB38\uC7A5\uC744 \uCC3E\uC9C0 \uBABB\uD568 \u2014 \uAE30\uBCF8\uAC12 ${pad(DEFAULTS.workdayStart.h)}:${pad(DEFAULTS.workdayStart.m)}`);
+  } catch (e) {
+    fallbacks.push(`\uCD08\uB871\uC774 \uC138\uD305 \uC77D\uAE30 \uC2E4\uD328(${e.message}) \u2014 \uC791\uC5C5\uC77C \uAE30\uBCF8\uAC12 \uC0AC\uC6A9`);
+  }
+  const employees = [];
+  try {
+    for (const p of await paginate("POST", `/data_sources/${IDS.employeeDs}/query`, {}, 500)) {
+      const name = titleOf(p);
+      employees.push({ id: normId(p.id), name, display: displayName(name), kind: p.properties?.["\uAD6C\uBD84"]?.select?.name ?? null, status: p.properties?.["\uC0C1\uD0DC"]?.select?.name ?? null });
+    }
+    sources.employees = `\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 ${IDS.employeeDs}`;
+  } catch (e) {
+    fallbacks.push(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC77D\uAE30 \uC2E4\uD328: ${e.message}`);
+  }
+  return {
+    loaded_at: (/* @__PURE__ */ new Date()).toISOString(),
+    statuses,
+    priorities,
+    dadOnlyPriorities: dadOnly,
+    interventions,
+    workerOptions: opts(P[PROPS.worker]),
+    inputterOptions: opts(P[PROPS.inputter]),
+    requesterOptions: opts(P[PROPS.requester]),
+    ruleDocs,
+    workdayStart,
+    projectPrefix,
+    employees,
+    sources,
+    fallbacks
+  };
+}
+var env2 = (k, d) => process.env[k] || d;
+var PROPS = {
+  title: env2("WOOS_PROP_TITLE", "\uC791\uC5C5\uBA85"),
+  status: env2("WOOS_PROP_STATUS", "\uC0C1\uD0DC"),
+  priority: env2("WOOS_PROP_PRIORITY", "\uC6B0\uC120\uC21C\uC704"),
+  worker: env2("WOOS_PROP_WORKER", "\uC791\uC5C5\uC790"),
+  assignee: env2("WOOS_PROP_ASSIGNEE", "\uB2F4\uB2F9\uC790"),
+  inputter: env2("WOOS_PROP_INPUTTER", "\uC785\uB825\uC790"),
+  requester: env2("WOOS_PROP_REQUESTER", "\uC758\uB8B0\uC790"),
+  projectName: env2("WOOS_PROP_PROJECT_NAME", "\uD504\uB85C\uC81D\uD2B8\uBA85"),
+  project: env2("WOOS_PROP_PROJECT", "\uD504\uB85C\uC81D\uD2B8"),
+  workday: env2("WOOS_PROP_WORKDAY", "\uC791\uC5C5\uC77C"),
+  doneAt: env2("WOOS_PROP_DONE_AT", "\uC644\uB8CC\uC77C\uC2DC"),
+  intervention: env2("WOOS_PROP_INTERVENTION", "\uC544\uBE60 \uAC1C\uC785"),
+  interventionReq: env2("WOOS_PROP_INTERVENTION_REQ", "\uAC1C\uC785 \uC694\uCCAD \uB0B4\uC6A9"),
+  needsCheck: env2("WOOS_PROP_NEEDS_CHECK", "\uD655\uC778\uD544\uC694"),
+  content: env2("WOOS_PROP_CONTENT", "\uC791\uC5C5\uB0B4\uC6A9"),
+  decision: env2("WOOS_PROP_DECISION", "\uACB0\uC815\uC0AC\uD56D"),
+  files: env2("WOOS_PROP_FILES", "\uAD00\uB828\uD30C\uC77C"),
+  commits: env2("WOOS_PROP_COMMITS", "Git Commit"),
+  note: env2("WOOS_PROP_NOTE", "\uBE44\uACE0")
+};
+var pad = (n) => String(n).padStart(2, "0");
+function parseRuleDocs(md) {
+  const i = md.indexOf("\uACF5\uC6A9 \uADDC\uCE59 \uBB38\uC11C \uBAA9\uB85D");
+  if (i < 0)
+    return [];
+  const out = [];
+  for (const line of md.slice(i).split("\n").slice(1, 80)) {
+    if (/^#{1,3}\s/.test(line) && out.length)
+      break;
+    if (!line.trim().startsWith("|")) {
+      if (out.length && line.trim() === "")
+        continue;
+      continue;
+    }
+    const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+    const idCell = cells.find((c) => /[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}/i.test(c));
+    if (!idCell)
+      continue;
+    out.push({ title: cells[0], id: normId(idCell.match(/[0-9a-f-]{32,36}/i)[0]), targets: cells[2] || "" });
+  }
+  return out;
+}
+function parseDadOnly(md, priorities) {
+  const found = /* @__PURE__ */ new Set();
+  for (const line of md.split("\n")) {
+    if (!/아빠\s*전용/.test(line))
+      continue;
+    for (const m of line.matchAll(/`([^`]+)`/g))
+      if (priorities.includes(m[1].trim()))
+        found.add(m[1].trim());
+  }
+  return [...found];
+}
+function workdayOf(date5, start) {
+  const kst = new Date(date5.getTime() + 9 * 3600 * 1e3);
+  const minutes = kst.getUTCHours() * 60 + kst.getUTCMinutes();
+  if (minutes < start.h * 60 + start.m)
+    kst.setUTCDate(kst.getUTCDate() - 1);
+  return kst.toISOString().slice(0, 10);
+}
+async function currentWorkday(now = /* @__PURE__ */ new Date()) {
+  return workdayOf(now, (await getPolicy()).workdayStart);
+}
+async function policySummary(force = false) {
+  const p = await getPolicy(force);
+  return {
+    loaded_at: p.loaded_at,
+    sources: p.sources,
+    fallbacks: p.fallbacks,
+    statuses: p.statuses,
+    priorities: p.priorities,
+    dad_only_priorities: p.dadOnlyPriorities,
+    ai_priorities: p.priorities.filter((x) => !p.dadOnlyPriorities.includes(x)),
+    interventions: p.interventions,
+    workday_start: `${pad(p.workdayStart.h)}:${pad(p.workdayStart.m)} (KST)`,
+    project_prefix_rule: p.projectPrefix,
+    rule_docs: p.ruleDocs,
+    employees: p.employees.map((e) => ({ name: e.name, display: e.display, \uAD6C\uBD84: e.kind, \uC0C1\uD0DC: e.status })),
+    select_options: { \uC791\uC5C5\uC790: p.workerOptions, \uC785\uB825\uC790: p.inputterOptions, \uC758\uB8B0\uC790: p.requesterOptions }
+  };
+}
+
+// dist/safety.js
+var TEST_PREFIX = process.env.WOOS_TEST_PREFIX || "[MCP\uD14C\uC2A4\uD2B8] ";
+var TEST_MAX_AGE_H = Number(process.env.WOOS_TEST_MAX_AGE_H || 72);
+var FALLBACK_RULE_DOCS = [IDS.rules, IDS.rulesExec, IDS.rulesIdentity, IDS.rulesDev].map(normId);
+async function ruleDocIds() {
+  const p = await getPolicy();
+  const ids = p.ruleDocs.length ? p.ruleDocs.map((d) => d.id) : FALLBACK_RULE_DOCS;
+  return /* @__PURE__ */ new Set([normId(IDS.rules), ...ids]);
+}
+async function isRuleDoc(id) {
+  return (await ruleDocIds()).has(normId(id));
+}
+async function assertNotRuleDoc(pageId) {
+  if (await isRuleDoc(pageId))
+    throw new Error("\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C\uB294 \uC77C\uBC18 \uC4F0\uAE30 \uB3C4\uAD6C\xB7\uC6D0\uD615 API\uB85C \uC218\uC815\uD558\uAC70\uB098 \uADF8 \uC544\uB798\uC5D0 \uB9CC\uB4E4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC9C0\uC2DC\uAC00 \uC788\uC744 \uB54C rules_update\uB97C \uC0AC\uC6A9\uD558\uC138\uC694.");
+}
+async function isProtected(id) {
+  const n = normId(id);
+  return PROTECTED.has(n) || await isRuleDoc(n);
+}
+async function assertMoveAllowed(id, dadInstruction) {
+  if (await isProtected(id)) {
+    if (!dadInstruction || dadInstruction.trim().length < 8)
+      throw new Error("\uBCF4\uD638 \uAC1D\uCCB4(\uD575\uC2EC DB\xB7\uD398\uC774\uC9C0\xB7\uC6B4\uC601\uADDC\uCE59)\uB294 \uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC9C0\uC2DC\uAC00 \uC788\uC744 \uB54C\uB9CC \uC774\uB3D9\uD569\uB2C8\uB2E4. move\uC758 dad_instruction\uC5D0 \uC544\uBE60\uC758 \uC2E4\uC81C \uC9C0\uC2DC \uBB38\uAD6C\uB97C \uC801\uC73C\uC138\uC694.");
+  }
+}
+async function assertSchemaChange(dsId, ds, body) {
+  if (!await isProtected(dsId) && !(ds?.parent?.database_id && await isProtected(ds.parent.database_id)))
+    return;
+  for (const [k, v] of Object.entries(body?.properties || {})) {
+    const cur = ds.properties[k];
+    if (!cur)
+      continue;
+    if (v === null)
+      throw new Error(`\uBCF4\uD638 DB\uC758 \uC18D\uC131 \uC0AD\uC81C \uAE08\uC9C0: ${k}`);
+    if (v.name && v.name !== k)
+      throw new Error(`\uBCF4\uD638 DB\uC758 \uC18D\uC131 \uC774\uB984 \uBCC0\uACBD \uAE08\uC9C0: ${k}`);
+    if (v.type && v.type !== cur.type)
+      throw new Error(`\uBCF4\uD638 DB\uC758 \uC18D\uC131 \uD0C0\uC785 \uBCC0\uACBD \uAE08\uC9C0: ${k}`);
+    const t = cur.type;
+    if (["select", "multi_select", "status"].includes(t) && v[t]?.options) {
+      const next = new Set(v[t].options.map((o) => o.name ?? o.id));
+      const nextIds = new Set(v[t].options.map((o) => o.id).filter(Boolean));
+      const lost = cur[t].options.filter((o) => !next.has(o.name) && !nextIds.has(o.id)).map((o) => o.name);
+      if (lost.length)
+        throw new Error(`\uBCF4\uD638 DB\uC758 \uC120\uD0DD\uC9C0 \uC0AD\uC81C \uAE08\uC9C0: ${k} \u2192 ${lost.join(", ")}`);
+    }
+    for (const kk of Object.keys(v))
+      if (kk !== "name" && kk !== "type" && kk !== t && kk !== "description")
+        throw new Error(`\uBCF4\uD638 DB \uC18D\uC131 ${k}\uC758 \uC815\uC758 \uBCC0\uACBD(${kk}) \uAE08\uC9C0`);
+  }
+  if (body?.in_trash !== void 0 || body?.archived !== void 0)
+    throw new Error("\uD734\uC9C0\uD1B5 \uCC98\uB9AC\uB294 trash_prepare \u2192 trash_execute\uB85C\uB9CC");
+}
+async function assertTaskDirectWrite(page, propNames) {
+  const dsId = page?.parent?.data_source_id;
+  if (!dsId || normId(dsId) !== normId(IDS.taskDs))
+    return;
+  const locked = [PROPS.status, PROPS.doneAt].filter((k) => propNames.includes(k));
+  if (locked.length)
+    throw new Error(`\uC791\uC5C5 \uC6D0\uC7A5\uC758 ${locked.join("\xB7")}\uB294 task_start/task_finish(\uC885\uB8CC \uAC8C\uC774\uD2B8)\uB85C\uB9CC \uBC14\uAFC9\uB2C8\uB2E4.`);
+}
+var botId = null;
+async function isTestObject(id, obj) {
+  const c = createdInfo(id);
+  if (c?.test)
+    return true;
+  if (!obj)
+    return false;
+  if (!botId)
+    botId = normId((await api("GET", "/users/me")).id);
+  const by = obj.created_by?.id ? normId(obj.created_by.id) : null;
+  const ageH = (Date.now() - Date.parse(obj.created_time || 0)) / 36e5;
+  return by === botId && titleOf(obj).startsWith(TEST_PREFIX.trim()) && ageH >= 0 && ageH <= TEST_MAX_AGE_H;
+}
+var ID = "([0-9a-fA-F-]{32,36})";
+var R = (s) => new RegExp("^" + s.replace(/\{id\}/g, ID) + "(\\?.*)?$");
+var READ_POST = [R("/search"), R("/data_sources/{id}/query"), R("/databases/{id}/query")];
+async function guardRaw(method, path, body) {
+  if (method === "GET")
+    return;
+  if (READ_POST.some((r) => r.test(path)) && method === "POST")
+    return;
+  const s = JSON.stringify(body || {});
+  if (/"(in_trash|archived|is_archived)"\s*:/.test(s))
+    throw new Error("\uD734\uC9C0\uD1B5/\uBCF4\uAD00 \uCC98\uB9AC\uB294 api_request\uB85C \uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. trash_prepare \u2192 trash_execute\uB97C \uC4F0\uC138\uC694.");
+  let m;
+  if (method === "DELETE") {
+    if (!(m = path.match(R("/blocks/{id}"))))
+      throw new Error("DELETE\uB294 /blocks/{id}(\uBCF8\uBB38 \uBE14\uB85D \uC0AD\uC81C)\uB9CC \uD5C8\uC6A9\uB429\uB2C8\uB2E4. \uD398\uC774\uC9C0\xB7DB\uB294 trash_prepare \u2192 trash_execute\uB97C \uC4F0\uC138\uC694.");
+    const b = await api("GET", `/blocks/${m[1]}`);
+    if (b.type === "child_page" || b.type === "child_database")
+      throw new Error("\uD558\uC704 \uD398\uC774\uC9C0\xB7DB \uBE14\uB85D\uC740 DELETE\uB85C \uC9C0\uC6B8 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. trash_prepare \u2192 trash_execute\uB97C \uC4F0\uC138\uC694.");
+    const pid = await owningPage(m[1]);
+    if (pid)
+      await assertNotRuleDoc(pid);
+    return;
+  }
+  if (method === "PATCH" && ((m = path.match(R("/blocks/{id}"))) || (m = path.match(R("/blocks/{id}/children"))))) {
+    const pid = await owningPage(m[1]);
+    if (pid)
+      await assertNotRuleDoc(pid);
+    if (path.endsWith("/children") && /"type"\s*:\s*"child_(page|database)"/.test(s))
+      throw new Error("\uC6D0\uD615 API\uB85C \uD558\uC704 \uD398\uC774\uC9C0\xB7DB \uBE14\uB85D\uC744 \uB9CC\uB4E4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. create_page/create_database\uB97C \uC4F0\uC138\uC694.");
+    return;
+  }
+  if (method === "POST" && R("/pages").test(path)) {
+    const par = body?.parent || {};
+    if (par.page_id)
+      await assertNotRuleDoc(par.page_id);
+    const ds = par.data_source_id || par.database_id;
+    if (ds && [IDS.taskDs, IDS.taskDb].map(normId).includes(normId(ds)))
+      throw new Error("\uC791\uC5C5 \uC6D0\uC7A5 \uB808\uCF54\uB4DC\uB294 task_create\uB85C\uB9CC \uB9CC\uB4ED\uB2C8\uB2E4(\uC911\uBCF5 \uAC80\uC0C9\xB7\uD504\uB85C\uC81D\uD2B8 \uC5F0\uACB0\xB7\uC785\uB825\uC790 \uAE30\uB85D).");
+    return;
+  }
+  if (method === "PATCH" && (m = path.match(R("/pages/{id}")))) {
+    await assertNotRuleDoc(m[1]);
+    if (body?.parent)
+      throw new Error("\uC6D0\uD615 API\uB85C \uD398\uC774\uC9C0\uB97C \uC62E\uAE38 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. move\uB97C \uC4F0\uC138\uC694(\uBCF4\uD638 \uAC1D\uCCB4\uB294 \uC544\uBE60 \uC9C0\uC2DC \uD544\uC694).");
+    const page = await api("GET", `/pages/${m[1]}`);
+    await assertTaskDirectWrite(page, Object.keys(body?.properties || {}));
+    return;
+  }
+  if (method === "POST" && R("/pages/{id}/move").test(path))
+    throw new Error("\uC6D0\uD615 API\uB85C \uD398\uC774\uC9C0\uB97C \uC62E\uAE38 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. move\uB97C \uC4F0\uC138\uC694.");
+  if (method === "POST" && R("/databases").test(path)) {
+    if (body?.parent?.page_id)
+      await assertNotRuleDoc(body.parent.page_id);
+    return;
+  }
+  if (method === "POST" && R("/data_sources").test(path)) {
+    const db = body?.parent?.database_id;
+    if (db && await isProtected(db))
+      throw new Error("\uBCF4\uD638 DB\uC5D0 \uB370\uC774\uD130\uC18C\uC2A4\uB97C \uCD94\uAC00\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    return;
+  }
+  if (method === "PATCH" && ((m = path.match(R("/data_sources/{id}"))) || (m = path.match(R("/databases/{id}"))))) {
+    if (body?.parent)
+      throw new Error("\uC6D0\uD615 API\uB85C DB\uB97C \uC62E\uAE38 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. move\uB97C \uC4F0\uC138\uC694.");
+    const isDs = path.startsWith("/data_sources/");
+    const obj = await api("GET", (isDs ? "/data_sources/" : "/databases/") + m[1]);
+    if (isDs)
+      await assertSchemaChange(normId(m[1]), obj, body);
+    else if (await isProtected(m[1]))
+      throw new Error("\uBCF4\uD638 DB \uC815\uC758\uB294 \uC6D0\uD615 API\uB85C \uBC14\uAFC0 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. update_schema\uB97C \uC4F0\uC138\uC694.");
+    return;
+  }
+  if (method === "POST" && (R("/comments").test(path) || R("/file_uploads").test(path) || R("/file_uploads/{id}/send").test(path) || R("/file_uploads/{id}/complete").test(path)))
+    return;
+  throw new Error(`api_request \uD5C8\uC6A9 \uBAA9\uB85D\uC5D0 \uC5C6\uB294 \uC4F0\uAE30 \uC694\uCCAD\uC785\uB2C8\uB2E4: ${method} ${path}. \uC804\uC6A9 \uB3C4\uAD6C\uB97C \uC4F0\uAC70\uB098 \uD544\uC694\uD558\uBA74 \uD5C8\uC6A9 \uBAA9\uB85D \uCD94\uAC00\uB97C \uC694\uCCAD\uD558\uC138\uC694.`);
 }
 
 // dist/generic.js
@@ -39573,9 +39910,13 @@ async function parentFor(parentId) {
   throw new Error("\uBD80\uBAA8\uB294 \uD398\uC774\uC9C0 \uB610\uB294 DB/\uB370\uC774\uD130\uC18C\uC2A4\uC5EC\uC57C \uD569\uB2C8\uB2E4.");
 }
 async function createPage(a) {
+  if (a.test_object && !a.title.startsWith(TEST_PREFIX.trim()))
+    a = { ...a, title: TEST_PREFIX + a.title };
   const { parent, schema: schema2, parentKind } = await parentFor(a.parent_id);
+  if (parentKind === "data_source" && [IDS.taskDs, IDS.taskDb].map(normId).includes(normId(parent.data_source_id)))
+    throw new Error("\uC791\uC5C5 \uC6D0\uC7A5 \uB808\uCF54\uB4DC\uB294 task_create\uB85C\uB9CC \uB9CC\uB4ED\uB2C8\uB2E4(\uC911\uBCF5 \uAC80\uC0C9\xB7\uD504\uB85C\uC81D\uD2B8 \uC5F0\uACB0\xB7\uC785\uB825\uC790 \uAE30\uB85D).");
   if (parentKind === "page")
-    assertNotRuleDoc(parent.page_id);
+    await assertNotRuleDoc(parent.page_id);
   let properties;
   if (schema2) {
     const titleProp = Object.entries(schema2).find(([, v]) => v.type === "title")[0];
@@ -39598,8 +39939,10 @@ async function createPage(a) {
   return { created: true, verified: after.title === a.title.replace(/\*\*|`|~~/g, "") || after.title.length > 0, page: after };
 }
 async function createDatabase(a) {
+  if (a.test_object && !a.title.startsWith(TEST_PREFIX.trim()))
+    a = { ...a, title: TEST_PREFIX + a.title };
   const pid = normId(a.parent_page_id);
-  assertNotRuleDoc(pid);
+  await assertNotRuleDoc(pid);
   const props = {};
   let hasTitle = false;
   for (const [k, v] of Object.entries(a.properties)) {
@@ -39619,7 +39962,7 @@ async function createDatabase(a) {
 }
 async function updatePage(a) {
   const id = normId(a.id);
-  assertNotRuleDoc(id);
+  await assertNotRuleDoc(id);
   const page = await api("GET", `/pages/${id}`);
   if (page.in_trash)
     throw new Error("\uD734\uC9C0\uD1B5\uC5D0 \uC788\uB294 \uD398\uC774\uC9C0\uC785\uB2C8\uB2E4. \uBA3C\uC800 restore \uD558\uC138\uC694.");
@@ -39641,6 +39984,7 @@ async function updatePage(a) {
     body.icon = a.icon ? { type: "emoji", emoji: a.icon } : null;
   if (!Object.keys(body).length)
     throw new Error("\uBC14\uAFC0 \uB0B4\uC6A9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+  await assertTaskDirectWrite(page, Object.keys(body.properties || {}));
   await api("PATCH", `/pages/${id}`, body);
   audit({ tool: "update_page", id, keys: Object.keys(a.properties || {}).concat(a.title !== void 0 ? ["title"] : []) });
   const after = await describe3(await resolve(id), true);
@@ -39681,7 +40025,7 @@ async function writeContent(a, allowRules = false) {
     throw new Error("\uBCF8\uBB38\uC740 \uD398\uC774\uC9C0(\uB610\uB294 \uBE14\uB85D)\uC5D0\uB9CC \uC4F8 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
   const pageId = r.kind === "page" ? r.id : await owningPage(r.id);
   if (!allowRules && pageId)
-    assertNotRuleDoc(pageId);
+    await assertNotRuleDoc(pageId);
   if (a.mode === "append") {
     const ids = await appendBlocks(r.id, mdToBlocks(a.markdown || ""), a.after_block_id ? normId(a.after_block_id) : void 0);
     audit({ tool: "write_content", mode: "append", id: r.id, blocks: ids.length });
@@ -39724,7 +40068,7 @@ async function writeContent(a, allowRules = false) {
 }
 async function setRelation(a) {
   const id = normId(a.page_id);
-  assertNotRuleDoc(id);
+  await assertNotRuleDoc(id);
   const page = await api("GET", `/pages/${id}`);
   const props = await simplifyProps(page);
   if (!(a.property in props))
@@ -39762,20 +40106,19 @@ async function updateSchema(a) {
       throw new Error("title \uC18D\uC131\uC740 \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
     props[k] = null;
   }
-  for (const [k, opts] of Object.entries(a.change_options || {})) {
+  for (const [k, opts2] of Object.entries(a.change_options || {})) {
     const t = ds.properties[k]?.type;
     if (!["select", "multi_select"].includes(t))
       throw new Error(`"${k}"\uB294 select/multi_select\uAC00 \uC544\uB2D9\uB2C8\uB2E4.`);
     const existing = ds.properties[k][t].options;
-    props[k] = { [t]: { options: opts.map((n) => existing.find((o) => o.name === n) ? { id: existing.find((o) => o.name === n).id, name: n } : { name: n }) } };
+    props[k] = { [t]: { options: opts2.map((n) => existing.find((o) => o.name === n) ? { id: existing.find((o) => o.name === n).id, name: n } : { name: n }) } };
   }
-  if (a.remove?.length && PROTECTED.has(dsId))
-    throw new Error("\uBCF4\uD638 \uB300\uC0C1 DB\uC758 \uC18D\uC131 \uC0AD\uC81C\uB294 MCP\uB85C \uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4 (\uB370\uC774\uD130 \uC190\uC2E4 \uC704\uD5D8). \uC544\uBE60\uAC00 \uC9C1\uC811 \uCC98\uB9AC\uD558\uC138\uC694.");
   const body = {};
   if (Object.keys(props).length)
     body.properties = props;
   if (a.title)
     body.title = inlineMd(a.title);
+  await assertSchemaChange(dsId, ds, body);
   await api("PATCH", `/data_sources/${dsId}`, body);
   audit({ tool: "update_schema", id: dsId, add: Object.keys(a.add || {}), rename: a.rename, remove: a.remove });
   const after = await getSchema({ id: dsId });
@@ -39793,9 +40136,12 @@ async function updateSchema(a) {
 }
 async function move(a) {
   const r = await resolve(a.id);
-  if (PROTECTED.has(r.id) && process.env.WOOS_ALLOW_PROTECTED_MOVE !== "1") {
-  }
+  await assertMoveAllowed(r.id, a.dad_instruction);
+  if (r.kind === "data_source" && r.obj.parent?.database_id)
+    await assertMoveAllowed(r.obj.parent.database_id, a.dad_instruction);
   const target = await resolve(a.new_parent_id);
+  if (target.kind === "page")
+    await assertNotRuleDoc(target.id);
   const before = (await describe3(r, false)).parent;
   if (r.kind === "page") {
     const parent = target.kind === "page" ? { type: "page_id", page_id: target.id } : { type: "data_source_id", data_source_id: (await toDataSource(target.id)).dsId };
@@ -39813,7 +40159,7 @@ async function move(a) {
     await api("PATCH", `/databases/${dbId}`, { parent: { type: "page_id", page_id: target.id } });
   } else
     throw new Error("\uBE14\uB85D \uC774\uB3D9\uC740 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
-  audit({ tool: "move", id: r.id, from: before, to: target.id });
+  audit({ tool: "move", id: r.id, from: before, to: target.id, dad_instruction: a.dad_instruction?.slice(0, 200) });
   const after = await describe3(await resolve(r.id), false);
   let verified = after.parent.id ? normId(after.parent.id) === target.id || target.kind !== "page" : false;
   if (r.kind === "data_source") {
@@ -39835,7 +40181,7 @@ async function trashPrepare(a) {
     const r = await resolve(raw);
     if (r.kind === "block")
       throw new Error(`${r.id}\uB294 \uBE14\uB85D\uC785\uB2C8\uB2E4. \uD398\uC774\uC9C0/DB/\uB370\uC774\uD130\uC18C\uC2A4/\uB808\uCF54\uB4DC\uB9CC \uD734\uC9C0\uD1B5 \uCC98\uB9AC\uD569\uB2C8\uB2E4.`);
-    if (PROTECTED.has(r.id))
+    if (await isProtected(r.id) || r.kind === "data_source" && r.obj.parent?.database_id && await isProtected(r.obj.parent.database_id))
       throw new Error(`\uBCF4\uD638 \uB300\uC0C1(${titleOf(r.obj)})\uC740 MCP\uB85C \uD734\uC9C0\uD1B5 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uAF2D \uD544\uC694\uD558\uBA74 \uC544\uBE60\uAC00 Notion\uC5D0\uC11C \uC9C1\uC811 \uCC98\uB9AC\uD558\uC138\uC694.`);
     const d = await describe3(r, false);
     if (d.in_trash)
@@ -39848,6 +40194,7 @@ async function trashPrepare(a) {
       childCount = (await paginate("POST", `/data_sources/${dsId}/query`, {}, 500)).length;
     }
     const created = createdInfo(r.id);
+    const test = await isTestObject(r.id, r.obj);
     items.push({ id: r.id, kind: r.kind, title: d.title, last_edited_time: d.last_edited_time });
     preview.push({
       id: r.id,
@@ -39857,8 +40204,8 @@ async function trashPrepare(a) {
       url: d.url,
       last_edited_time: d.last_edited_time,
       contains: childCount,
-      created_by_this_mcp: !!created,
-      test_object: !!created?.test
+      created_by_this_mcp: !!created || test,
+      test_object: test
     });
   }
   const token2 = newPending(items);
@@ -39875,21 +40222,24 @@ async function trashExecute(a) {
   if (approval.length < 4)
     throw new Error("approval(\uC0AD\uC81C \uC2B9\uC778 \uADFC\uAC70)\uC774 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.");
   const isTestCleanup = /테스트\s*객체\s*정리/.test(approval);
-  for (const it of p.items) {
-    const c = createdInfo(it.id);
-    if (isTestCleanup && !(c && c.test))
-      throw new Error(`'\uD14C\uC2A4\uD2B8 \uAC1D\uCCB4 \uC815\uB9AC' \uADFC\uAC70\uB294 \uC774 MCP\uAC00 test_object\uB85C \uB9CC\uB4E0 \uAC1D\uCCB4\uC5D0\uB9CC \uC4F8 \uC218 \uC788\uC2B5\uB2C8\uB2E4: ${it.title} (${it.id})`);
-  }
   if (!isTestCleanup && !/아빠|사장님/.test(a.approved_by))
     throw new Error("\uAE30\uC874 \uB370\uC774\uD130 \uD734\uC9C0\uD1B5 \uCC98\uB9AC\uB294 \uC544\uBE60(\uC0AC\uC7A5\uB2D8)\uC758 \uBA85\uC2DC\uC801 \uC0AD\uC81C \uC9C0\uC2DC\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4. approved_by='\uC544\uBE60'\uC640 \uC2E4\uC81C \uC9C0\uC2DC \uBB38\uAD6C\uB97C \uC8FC\uC138\uC694.");
-  const results = [];
+  const checked = [];
   for (const it of p.items) {
     const r = await resolve(it.id);
     const cur = await describe3(r, false);
-    if (cur.title !== it.title || cur.last_edited_time !== it.last_edited_time) {
-      results.push({ id: it.id, title: it.title, trashed: false, reason: "\uC2B9\uC778 \uC774\uD6C4 \uB300\uC0C1\uC774 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4(\uC81C\uBAA9/\uC218\uC815\uC2DC\uAC01). \uB2E4\uC2DC prepare \uD558\uC138\uC694." });
-      continue;
-    }
+    if (cur.in_trash)
+      throw new Error(`\uC774\uBBF8 \uD734\uC9C0\uD1B5\uC5D0 \uC788\uB294 \uB300\uC0C1\uC774 \uD3EC\uD568\uB3FC \uC788\uC2B5\uB2C8\uB2E4(\uC2B9\uC778 \uD1A0\uD070 \uC7AC\uC0AC\uC6A9 \uCC28\uB2E8): ${it.title}. trash_prepare\uBD80\uD130 \uB2E4\uC2DC \uD558\uC138\uC694.`);
+    if (cur.title !== it.title || cur.last_edited_time !== it.last_edited_time)
+      throw new Error(`\uC2B9\uC778 \uC774\uD6C4 \uB300\uC0C1\uC774 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4(\uC81C\uBAA9/\uC218\uC815\uC2DC\uAC01): ${it.title}. trash_prepare\uBD80\uD130 \uB2E4\uC2DC \uD558\uC138\uC694.`);
+    if (await isProtected(r.id))
+      throw new Error(`\uBCF4\uD638 \uB300\uC0C1\uC740 \uD734\uC9C0\uD1B5 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4: ${it.title}`);
+    if (isTestCleanup && !await isTestObject(r.id, r.obj))
+      throw new Error(`'\uD14C\uC2A4\uD2B8 \uAC1D\uCCB4 \uC815\uB9AC' \uADFC\uAC70\uB294 \uC774 MCP\uAC00 test_object\uB85C \uB9CC\uB4E0 \uAC1D\uCCB4\uC5D0\uB9CC \uC4F8 \uC218 \uC788\uC2B5\uB2C8\uB2E4: ${it.title} (${it.id})`);
+    checked.push({ it, r });
+  }
+  const results = [];
+  for (const { it } of checked) {
     const path = it.kind === "page" ? "/pages/" : it.kind === "database" ? "/databases/" : "/data_sources/";
     await api("PATCH", path + it.id, { in_trash: true });
     const re = await api("GET", path + it.id);
@@ -39949,33 +40299,10 @@ async function apiRequest(a) {
   const path = a.path.startsWith("/") ? a.path : "/" + a.path;
   if (/^\/v1\//.test(path))
     throw new Error("path\uB294 /v1 \uC5C6\uC774 \uC8FC\uC138\uC694 (\uC608: /users).");
-  if (a.method === "DELETE") {
-    const m = path.match(/^\/blocks\/([0-9a-f-]{32,36})$/i);
-    if (!m)
-      throw new Error("DELETE\uB294 /blocks/{id}(\uBCF8\uBB38 \uBE14\uB85D \uC0AD\uC81C)\uB9CC \uD5C8\uC6A9\uB429\uB2C8\uB2E4. \uD398\uC774\uC9C0\xB7DB\uB294 trash_prepare \u2192 trash_execute\uB97C \uC4F0\uC138\uC694.");
-    const b = await api("GET", `/blocks/${m[1]}`);
-    if (b.type === "child_page" || b.type === "child_database")
-      throw new Error("\uD558\uC704 \uD398\uC774\uC9C0\xB7DB \uBE14\uB85D\uC740 DELETE\uB85C \uC9C0\uC6B8 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. trash_prepare \u2192 trash_execute\uB97C \uC4F0\uC138\uC694.");
-    const pid = await owningPage(m[1]);
-    if (pid)
-      assertNotRuleDoc(pid);
-    audit({ tool: "api_request", method: "DELETE", path });
-    return api("DELETE", path);
-  }
-  const bodyStr = JSON.stringify(a.body || {});
-  if (/"(in_trash|archived|is_archived)"\s*:/.test(bodyStr))
-    throw new Error("\uD734\uC9C0\uD1B5/\uBCF4\uAD00 \uCC98\uB9AC\uB294 api_request\uB85C \uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. trash_prepare \u2192 trash_execute\uB97C \uC4F0\uC138\uC694.");
-  if (a.method === "PATCH" && /^\/(pages|blocks)\//.test(path)) {
-    const m = path.match(/[0-9a-f-]{32,36}/i);
-    if (m) {
-      const pid = path.startsWith("/pages/") ? normId(m[0]) : await owningPage(m[0]);
-      if (pid)
-        assertNotRuleDoc(pid);
-    }
-  }
+  await guardRaw(a.method, path, a.body);
   if (a.method !== "GET")
     audit({ tool: "api_request", method: a.method, path });
-  return api(a.method, path, a.method === "GET" ? void 0 : a.body ?? {});
+  return api(a.method, path, a.method === "GET" || a.method === "DELETE" ? void 0 : a.body ?? {});
 }
 async function uploadFile(a) {
   const { readFileSync: readFileSync3 } = await import("node:fs");
@@ -40008,7 +40335,7 @@ async function uploadFile(a) {
   const out = { file_upload_id: fu.id, status: sent.status, filename: name, content_type: ctype };
   if (a.attach_to) {
     const pid = normId(a.attach_to);
-    assertNotRuleDoc(pid);
+    await assertNotRuleDoc(pid);
     const kind = ctype.startsWith("image/") ? "image" : ctype === "application/pdf" ? "pdf" : ctype.startsWith("video/") ? "video" : ctype.startsWith("audio/") ? "audio" : "file";
     const blk = { type: kind, [kind]: { type: "file_upload", file_upload: { id: fu.id }, caption: a.caption ? [{ type: "text", text: { content: a.caption } }] : [] } };
     const r = await api("PATCH", `/blocks/${pid}/children`, { children: [blk] });
@@ -40020,70 +40347,113 @@ async function uploadFile(a) {
   return out;
 }
 
+// dist/context.js
+import { AsyncLocalStorage } from "node:async_hooks";
+var store = new AsyncLocalStorage();
+function runWithCaller(caller, transport, fn) {
+  return store.run({ caller: caller?.trim() || null, transport }, fn);
+}
+function currentCaller() {
+  const s = store.getStore();
+  if (s)
+    return s.caller;
+  return process.env.WOOS_CALLER?.trim() || null;
+}
+
 // dist/woos.js
-var AI_PRIORITIES = ["\uC0C1", "\uC911", "\uD558"];
 function nowKst() {
   const d = new Date(Date.now() + 9 * 3600 * 1e3);
   return d.toISOString().slice(0, 16).replace("T", " ");
 }
-var todayKst = () => nowKst().slice(0, 10);
+var stamp = () => {
+  const c = currentCaller();
+  return `[${nowKst()}${c ? " \xB7 " + c : ""}]`;
+};
 var taskSchema;
+var taskSchemaAt = 0;
 async function schema() {
-  if (!taskSchema)
+  if (!taskSchema || Date.now() - taskSchemaAt > 3e5) {
     taskSchema = (await api("GET", `/data_sources/${IDS.taskDs}`)).properties;
+    taskSchemaAt = Date.now();
+  }
   return taskSchema;
 }
 async function readTask(id) {
   const p = await api("GET", `/pages/${normId(id)}`);
-  if (p.parent?.data_source_id && normId(p.parent.data_source_id) !== normId(IDS.taskDs))
+  if (!p.parent?.data_source_id || normId(p.parent.data_source_id) !== normId(IDS.taskDs))
     throw new Error("\uC791\uC5C5 \uC6D0\uC7A5\uC758 \uC791\uC5C5\uC774 \uC544\uB2D9\uB2C8\uB2E4.");
   return { page: p, props: await simplifyProps(p) };
 }
 function summarize(p, props, full = false) {
-  const \uC791\uC5C5\uB0B4\uC6A9 = props["\uC791\uC5C5\uB0B4\uC6A9"] || "";
+  const \uC791\uC5C5\uB0B4\uC6A9 = props[PROPS.content] || "";
   return {
     id: p.id,
     url: p.url,
-    \uC791\uC5C5\uBA85: props["\uC791\uC5C5\uBA85"],
-    \uC0C1\uD0DC: props["\uC0C1\uD0DC"],
-    \uC6B0\uC120\uC21C\uC704: props["\uC6B0\uC120\uC21C\uC704"],
-    \uC791\uC5C5\uC790: props["\uC791\uC5C5\uC790"],
-    \uD504\uB85C\uC81D\uD2B8\uBA85: props["\uD504\uB85C\uC81D\uD2B8\uBA85"],
-    \uC791\uC5C5\uC77C: props["\uC791\uC5C5\uC77C"],
-    \uC644\uB8CC\uC77C\uC2DC: props["\uC644\uB8CC\uC77C\uC2DC"],
-    \uC544\uBE60\uAC1C\uC785: props["\uC544\uBE60 \uAC1C\uC785"],
-    \uAC1C\uC785\uC694\uCCAD\uB0B4\uC6A9: props["\uAC1C\uC785 \uC694\uCCAD \uB0B4\uC6A9"],
-    \uD655\uC778\uD544\uC694: props["\uD655\uC778\uD544\uC694"],
+    \uC791\uC5C5\uBA85: props[PROPS.title],
+    \uC0C1\uD0DC: props[PROPS.status],
+    \uC6B0\uC120\uC21C\uC704: props[PROPS.priority],
+    \uC791\uC5C5\uC790: props[PROPS.worker],
+    \uB2F4\uB2F9\uC790: props[PROPS.assignee],
+    \uC785\uB825\uC790: props[PROPS.inputter],
+    \uD504\uB85C\uC81D\uD2B8\uBA85: props[PROPS.projectName],
+    \uC791\uC5C5\uC77C: props[PROPS.workday],
+    \uC644\uB8CC\uC77C\uC2DC: props[PROPS.doneAt],
+    \uC544\uBE60\uAC1C\uC785: props[PROPS.intervention],
+    \uAC1C\uC785\uC694\uCCAD\uB0B4\uC6A9: props[PROPS.interventionReq],
+    \uD655\uC778\uD544\uC694: props[PROPS.needsCheck],
     in_trash: p.in_trash,
-    ...full ? { \uC791\uC5C5\uB0B4\uC6A9, \uACB0\uC815\uC0AC\uD56D: props["\uACB0\uC815\uC0AC\uD56D"], \uAD00\uB828\uD30C\uC77C: props["\uAD00\uB828\uD30C\uC77C"], GitCommit: props["Git Commit"], \uBE44\uACE0: props["\uBE44\uACE0"], \uC758\uB8B0\uC790: props["\uC758\uB8B0\uC790"], \uC785\uB825\uC790: props["\uC785\uB825\uC790"], \uD504\uB85C\uC81D\uD2B8: props["\uD504\uB85C\uC81D\uD2B8"] } : { \uCD5C\uADFC\uAE30\uB85D: \uC791\uC5C5\uB0B4\uC6A9.slice(-400) }
+    ...full ? { \uC791\uC5C5\uB0B4\uC6A9, \uACB0\uC815\uC0AC\uD56D: props[PROPS.decision], \uAD00\uB828\uD30C\uC77C: props[PROPS.files], GitCommit: props[PROPS.commits], \uBE44\uACE0: props[PROPS.note], \uC758\uB8B0\uC790: props[PROPS.requester], \uD504\uB85C\uC81D\uD2B8: props[PROPS.project] } : { \uCD5C\uADFC\uAE30\uB85D: \uC791\uC5C5\uB0B4\uC6A9.slice(-400) }
   };
 }
 function appendRt(page, prop, text) {
   const cur = page.properties[prop]?.rich_text || [];
-  const add = rt((cur.length ? "\n" : "") + `[${nowKst()}] ${text}`);
+  const add = rt((cur.length ? "\n" : "") + `${stamp()} ${text}`);
   let next = [...cur.map((r) => ({ type: "text", text: { content: r.plain_text, link: r.href ? { url: r.href } : null }, annotations: r.annotations })), ...add];
   if (next.length > 100)
-    next = rt(plain(cur) + (cur.length ? "\n" : "") + `[${nowKst()}] ${text}`).slice(-100);
+    next = rt(plain(cur) + (cur.length ? "\n" : "") + `${stamp()} ${text}`).slice(-100);
   return { rich_text: next };
+}
+async function findEmployee(name) {
+  const p = await getPolicy();
+  const n = name.trim();
+  const hits = p.employees.filter((e) => e.name === n || e.display === n || e.display === displayName(n));
+  return hits.length === 1 ? hits[0] : null;
+}
+var hasDadInstruction = (s) => !!s && s.trim().length >= 8;
+async function checkPriority(value, dadInstruction) {
+  const p = await getPolicy();
+  if (!p.priorities.includes(value))
+    throw new Error(`\uC6B0\uC120\uC21C\uC704 '${value}'\uB294 \uC791\uC5C5 \uC6D0\uC7A5 \uC120\uD0DD\uC9C0\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4: ${p.priorities.join("/")}`);
+  if (p.dadOnlyPriorities.includes(value) && !hasDadInstruction(dadInstruction))
+    throw new Error(`'${value}'\uB294 \uC6B4\uC601\uADDC\uCE59\uC0C1 \uC544\uBE60 \uC804\uC6A9 \uC6B0\uC120\uC21C\uC704\uC785\uB2C8\uB2E4. \uC544\uBE60\uAC00 \uBA85\uC2DC\uC801\uC73C\uB85C \uC9C0\uC2DC\uD55C \uACBD\uC6B0\uC5D0\uB9CC dad_instruction\uC5D0 \uC2E4\uC81C \uC9C0\uC2DC \uBB38\uAD6C\uB97C \uC801\uC5B4 \uC9C0\uC815\uD558\uC138\uC694.`);
+}
+async function checkIntervention(iv) {
+  if (!iv)
+    return;
+  const p = await getPolicy();
+  if (!p.interventions.includes(iv.type))
+    throw new Error(`\uC544\uBE60 \uAC1C\uC785 \uAC12 '${iv.type}'\uB294 \uC120\uD0DD\uC9C0\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4: ${p.interventions.join("/")}`);
+  if (iv.type !== INTERVENTION_NONE && !(iv.request || "").trim())
+    throw new Error("\uC544\uBE60 \uAC1C\uC785\uC774 \uD544\uC694\uD558\uBA74 request(\uC544\uBE60\uAC00 \uBB34\uC5C7\uC744 \uACB0\uC815\uD558\uAC70\uB098 \uC9C1\uC811 \uD574\uC57C \uD558\uB294\uC9C0)\uB97C \uAD6C\uCCB4\uC801\uC73C\uB85C \uC801\uC5B4\uC57C \uD569\uB2C8\uB2E4.");
 }
 async function taskSearch(a) {
   const common = [];
   if (a.query)
-    common.push({ property: "\uC791\uC5C5\uBA85", title: { contains: a.query } });
+    common.push({ property: PROPS.title, title: { contains: a.query } });
   if (a.project)
-    common.push({ property: "\uD504\uB85C\uC81D\uD2B8\uBA85", rich_text: { contains: a.project } });
+    common.push({ property: PROPS.projectName, rich_text: { contains: a.project } });
   if (a.worker)
-    common.push({ property: "\uC791\uC5C5\uC790", select: { equals: a.worker } });
+    common.push({ property: PROPS.worker, select: { equals: a.worker } });
   const branches = [];
   const st = a.status ? Array.isArray(a.status) ? a.status : [a.status] : null;
   if (st)
     for (const s of st)
-      branches.push([{ property: "\uC0C1\uD0DC", select: { equals: s } }]);
+      branches.push([{ property: PROPS.status, select: { equals: s } }]);
   else {
-    branches.push([{ property: "\uC0C1\uD0DC", select: { does_not_equal: "\uC644\uB8CC" } }]);
+    branches.push([{ property: PROPS.status, select: { does_not_equal: STATUS_NAMES.done } }]);
     if (a.include_done_days) {
       const since = new Date(Date.now() - a.include_done_days * 864e5).toISOString().slice(0, 10);
-      branches.push([{ property: "\uC0C1\uD0DC", select: { equals: "\uC644\uB8CC" } }, { property: "\uC644\uB8CC\uC77C\uC2DC", date: { on_or_after: since } }]);
+      branches.push([{ property: PROPS.status, select: { equals: STATUS_NAMES.done } }, { property: PROPS.doneAt, date: { on_or_after: since } }]);
     }
   }
   const ands = branches.map((b) => [...common, ...b]).map((c) => c.length === 1 ? c[0] : { and: c });
@@ -40100,14 +40470,37 @@ async function taskGet(a) {
 }
 async function findProject(name) {
   const rows = await paginate("POST", `/data_sources/${IDS.projectDs}/query`, {}, 300);
-  const hit = rows.find((p) => titleOf(p).trim().toLowerCase() === name.trim().toLowerCase());
-  return hit ? hit.id : null;
+  const n = name.trim().toLowerCase();
+  const hit = rows.find((p) => titleOf(p).trim().toLowerCase() === n);
+  const words = n.split(/[\s\-_/]+/).filter((w) => w.length >= 3);
+  const suggestions = rows.map((p) => titleOf(p).trim()).filter((t) => t && (t.toLowerCase().includes(n) || n.includes(t.toLowerCase()) || words.some((w) => t.toLowerCase().includes(w)))).slice(0, 8);
+  return { id: hit ? normId(hit.id) : null, suggestions };
 }
 var tokens = (s) => s.replace(/\[[^\]]*\]/g, " ").split(/[\s,·/()\-—:]+/).filter((w) => w.length >= 2);
 async function taskCreate(a) {
-  if (a.priority && !AI_PRIORITIES.includes(a.priority))
-    throw new Error("AI\uB294 \uC6B0\uC120\uC21C\uC704\uB97C \uC0C1/\uC911/\uD558\uB9CC \uC9C0\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uCD5C\uC0C1\xB7\uCD5C\uD558\uB294 \uC544\uBE60 \uC804\uC6A9\uC785\uB2C8\uB2E4.");
-  const title = a.title.trim().startsWith(`[${a.project}]`) ? a.title.trim() : `[${a.project}] ${a.title.trim()}`;
+  const p = await getPolicy();
+  const status = a.status || STATUS_NAMES.todo;
+  if (!p.statuses.includes(status))
+    throw new Error(`\uC0C1\uD0DC '${status}'\uB294 \uC791\uC5C5 \uC6D0\uC7A5 \uC120\uD0DD\uC9C0\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4: ${p.statuses.join("/")}`);
+  if ([STATUS_NAMES.done, STATUS_NAMES.waiting, STATUS_NAMES.hold].includes(status))
+    throw new Error(`\uC0C8 \uC791\uC5C5\uC744 '${status}'\uB85C \uB9CC\uB4E4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9CC\uB4E0 \uB4A4 task_finish(\uC885\uB8CC \uAC8C\uC774\uD2B8)\uB85C \uBC14\uAFB8\uC138\uC694.`);
+  const priority = a.priority || (p.priorities.includes("\uC911") ? "\uC911" : void 0);
+  if (priority)
+    await checkPriority(priority, a.dad_instruction);
+  if (a.extra && (PROPS.status in a.extra || PROPS.doneAt in a.extra || PROPS.inputter in a.extra))
+    throw new Error("extra\uB85C \uC0C1\uD0DC\xB7\uC644\uB8CC\uC77C\uC2DC\xB7\uC785\uB825\uC790\uB97C \uC9C0\uC815\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+  const proj = await findProject(a.project);
+  if (!proj.id)
+    return {
+      created: false,
+      reason: `\uD504\uB85C\uC81D\uD2B8 \uC6D0\uC7A5\uC5D0 '${a.project}'\uC640 \uC774\uB984\uC774 \uC815\uD655\uD788 \uAC19\uC740 \uD504\uB85C\uC81D\uD2B8\uAC00 \uC5C6\uC5B4 \uC791\uC5C5\uC744 \uB9CC\uB4E4\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uAE30\uC874 \uD504\uB85C\uC81D\uD2B8 \uC774\uB984\uC744 \uC815\uD655\uD788 \uC4F0\uAC70\uB098, \uACF5\uD1B5\xB7\uBBF8\uBD84\uB958 \uC791\uC5C5\uC774\uBA74 \uC6B4\uC601\uADDC\uCE59\uC5D0 \uB530\uB77C master-project\uB97C \uC4F0\uC138\uC694. \uC0C8 \uD504\uB85C\uC81D\uD2B8 \uB4F1\uB85D\uC740 \uC544\uBE60 \uC2B9\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4(\uC790\uB3D9 \uC0DD\uC131\uD558\uC9C0 \uC54A\uC74C).`,
+      project_suggestions: proj.suggestions
+    };
+  let title = a.title.trim();
+  if (p.projectPrefix && !title.startsWith(`[${a.project}]`))
+    title = `[${a.project}] ${title}`;
+  if (a.test_object && !title.startsWith(TEST_PREFIX.trim()))
+    title = TEST_PREFIX + title;
   const pool = (await taskSearch({ include_done_days: 7, limit: 400 })).tasks;
   const kw = tokens(a.title);
   const candidates = pool.map((t) => ({ t, score: kw.filter((w) => (t.\uC791\uC5C5\uBA85 || "").includes(w)).length })).filter((x) => x.score >= Math.max(2, Math.ceil(kw.length * 0.5)) || (x.t.\uC791\uC5C5\uBA85 || "").includes(a.title.trim())).sort((x, y) => y.score - x.score).slice(0, 8).map((x) => ({ id: x.t.id, \uC791\uC5C5\uBA85: x.t.\uC791\uC5C5\uBA85, \uC0C1\uD0DC: x.t.\uC0C1\uD0DC }));
@@ -40122,119 +40515,169 @@ async function taskCreate(a) {
   }
   if (a.distinct_from && (!a.distinct_from.reason || a.distinct_from.reason.trim().length < 5))
     throw new Error("distinct_from.reason\uC5D0 \uC65C \uB2E4\uB978 \uC791\uC5C5\uC778\uC9C0 \uAD6C\uCCB4\uC801\uC73C\uB85C \uC801\uC73C\uC138\uC694.");
+  const notes = [];
+  const caller = currentCaller();
+  const workerName = (a.worker || caller || "").trim();
+  if (!workerName)
+    throw new Error("\uC791\uC5C5\uC790\uB97C \uC54C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uD638\uCD9C\uC790 \uC815\uBCF4\uAC00 \uC5C6\uC73C\uBA74 worker\uC5D0 \uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC774\uB984\uC744 \uC801\uC73C\uC138\uC694.");
+  const emp = await findEmployee(workerName);
+  if (!emp)
+    throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${workerName}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${p.employees.map((e) => e.display).join(", ")}`);
   const s = await schema();
-  const projectId = await findProject(a.project);
-  const vals = {
-    \uC791\uC5C5\uBA85: title,
-    \uC0C1\uD0DC: a.status || "\uBBF8\uCC29\uC218",
-    \uC6B0\uC120\uC21C\uC704: a.priority || "\uC911",
-    \uD504\uB85C\uC81D\uD2B8\uBA85: a.project,
-    \uC791\uC5C5\uC790: a.worker || "Claude Code",
-    \uC758\uB8B0\uC790: a.requester || "\uC544\uBE60",
-    \uC785\uB825\uC790: "\uCF54\uB4DC\uB514",
-    \uC791\uC5C5\uC77C: todayKst(),
-    ...projectId ? { \uD504\uB85C\uC81D\uD2B8: [projectId] } : {},
-    ...a.extra || {}
-  };
+  const vals = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.workday]: await currentWorkday(), [PROPS.project]: [proj.id] };
+  if (priority)
+    vals[PROPS.priority] = priority;
+  if (s[PROPS.assignee])
+    vals[PROPS.assignee] = [emp.id];
+  else
+    notes.push(`'${PROPS.assignee}' relation \uC18D\uC131\uC774 \uC5C6\uC5B4 \uB2F4\uB2F9\uC790\uB97C relation\uC73C\uB85C \uB0A8\uAE30\uC9C0 \uBABB\uD568`);
+  if (p.workerOptions.includes(emp.display))
+    vals[PROPS.worker] = emp.display;
+  else
+    notes.push(`\uC791\uC5C5\uC790(select) \uC120\uD0DD\uC9C0\uC5D0 '${emp.display}'\uAC00 \uC5C6\uC5B4 \uBE44\uC6CC \uB460 \u2014 \uB2F4\uB2F9\uC790 relation\uC774 \uC815\uD655\uD55C \uAE30\uB85D`);
+  if (!caller)
+    notes.push("\uD638\uCD9C\uC790\uB97C \uD655\uC778\uD560 \uC218 \uC5C6\uC5B4 \uC785\uB825\uC790\uB97C \uBE44\uC6CC \uB460(\uCD94\uC815\uD558\uC9C0 \uC54A\uC74C)");
+  else if (p.inputterOptions.includes(caller))
+    vals[PROPS.inputter] = caller;
+  else
+    notes.push(`\uC785\uB825\uC790(select) \uC120\uD0DD\uC9C0\uC5D0 '${caller}'\uAC00 \uC5C6\uC5B4 \uBE44\uC6CC \uB460 \u2014 \uC791\uC5C5\uB0B4\uC6A9 \uAE30\uB85D \uBA38\uB9AC\uD45C\uC5D0 \uD638\uCD9C\uC790 \uD45C\uC2DC`);
+  if (a.requester) {
+    if (p.requesterOptions.includes(a.requester))
+      vals[PROPS.requester] = a.requester;
+    else
+      notes.push(`\uC758\uB8B0\uC790 \uC120\uD0DD\uC9C0\uC5D0 '${a.requester}'\uAC00 \uC5C6\uC5B4 \uBE44\uC6CC \uB460`);
+  }
+  Object.assign(vals, a.extra || {});
   const props = buildProps(s, vals);
-  props["\uC791\uC5C5\uB0B4\uC6A9"] = { rich_text: rt(`[${nowKst()}] ${a.content}`) };
+  props[PROPS.content] = { rich_text: rt(`${stamp()} ${a.content}${a.dad_instruction ? `
+(\uC544\uBE60 \uC9C0\uC2DC: ${a.dad_instruction})` : ""}`) };
   const page = await api("POST", "/pages", { parent: { type: "data_source_id", data_source_id: IDS.taskDs }, properties: props });
   markCreated(page.id, "page", title, !!a.test_object);
-  audit({ tool: "task_create", id: page.id, title, distinct_from: a.distinct_from });
+  audit({ tool: "task_create", id: page.id, title, caller, distinct_from: a.distinct_from, dad_instruction: a.dad_instruction });
   const re = await readTask(page.id);
-  return { created: true, project_linked: !!projectId, verified: re.props["\uC791\uC5C5\uBA85"] === title && re.props["\uC0C1\uD0DC"] === vals.\uC0C1\uD0DC, task: summarize(re.page, re.props) };
+  const linked = (re.props[PROPS.project] || []).map(normId).includes(proj.id);
+  const assigned = !s[PROPS.assignee] || (re.props[PROPS.assignee] || []).map(normId).includes(emp.id);
+  return {
+    created: true,
+    project_linked: linked,
+    assignee: emp.name,
+    inputter: vals[PROPS.inputter] ?? null,
+    notes,
+    verified: re.props[PROPS.title] === title && re.props[PROPS.status] === status && linked && assigned,
+    task: summarize(re.page, re.props)
+  };
 }
 async function taskStart(a) {
   const { page, props } = await readTask(a.id);
   if (page.in_trash)
     throw new Error("\uD734\uC9C0\uD1B5\uC5D0 \uC788\uB294 \uC791\uC5C5\uC785\uB2C8\uB2E4.");
-  if (props["\uC0C1\uD0DC"] === "\uC644\uB8CC" && !a.reopen_completed)
+  if (props[PROPS.status] === STATUS_NAMES.done && !a.reopen_completed)
     throw new Error("\uC774\uBBF8 \uC644\uB8CC\uB41C \uC791\uC5C5\uC785\uB2C8\uB2E4. \uB2E4\uC2DC \uC5F4\uB824\uBA74 reopen_completed=true\uC640 \uC774\uC720(note)\uB97C \uC8FC\uC138\uC694. \uBCC4\uAC1C \uD6C4\uC18D \uC791\uC5C5\uC774\uBA74 task_create\uB85C \uB4F1\uB85D\uD558\uC138\uC694.");
   const before = summarize(page, props, true);
-  const body = { properties: { \uC0C1\uD0DC: { select: { name: "\uC9C4\uD589\uC911" } }, \uC791\uC5C5\uB0B4\uC6A9: appendRt(page, "\uC791\uC5C5\uB0B4\uC6A9", `\uC791\uC5C5 \uC2DC\uC791${props["\uC0C1\uD0DC"] === "\uC644\uB8CC" ? "(\uC7AC\uAC1C)" : ""}: ${a.note}`) } };
-  if (a.worker)
-    body.properties.\uC791\uC5C5\uC790 = { select: { name: a.worker } };
-  if (props["\uC544\uBE60 \uAC1C\uC785"] && props["\uC544\uBE60 \uAC1C\uC785"] !== "\uC5C6\uC74C") {
+  const body = { properties: { [PROPS.status]: { select: { name: STATUS_NAMES.doing } }, [PROPS.content]: appendRt(page, PROPS.content, `\uC791\uC5C5 \uC2DC\uC791${props[PROPS.status] === STATUS_NAMES.done ? "(\uC7AC\uAC1C)" : ""}: ${a.note}`) } };
+  if (a.worker) {
+    const emp = await findEmployee(a.worker);
+    if (!emp)
+      throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${a.worker}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`);
+    const p = await getPolicy();
+    if (page.properties[PROPS.assignee])
+      body.properties[PROPS.assignee] = { relation: [{ id: emp.id }] };
+    if (p.workerOptions.includes(emp.display))
+      body.properties[PROPS.worker] = { select: { name: emp.display } };
   }
   await api("PATCH", `/pages/${page.id}`, body);
-  audit({ tool: "task_start", id: page.id, from: props["\uC0C1\uD0DC"] });
+  audit({ tool: "task_start", id: page.id, from: props[PROPS.status], caller: currentCaller() });
   const after = await readTask(page.id);
-  const ok = after.props["\uC0C1\uD0DC"] === "\uC9C4\uD589\uC911";
+  const ok = after.props[PROPS.status] === STATUS_NAMES.doing;
   return {
     verified: ok,
-    status_before: props["\uC0C1\uD0DC"],
-    status_after: after.props["\uC0C1\uD0DC"],
+    status_before: props[PROPS.status],
+    status_after: after.props[PROPS.status],
     prior_record: { \uACB0\uC815\uC0AC\uD56D: before.\uACB0\uC815\uC0AC\uD56D, \uAD00\uB828\uD30C\uC77C: before.\uAD00\uB828\uD30C\uC77C, GitCommit: before.GitCommit, \uCD5C\uADFC\uAE30\uB85D: (before.\uC791\uC5C5\uB0B4\uC6A9 || "").slice(-1500), \uC544\uBE60\uAC1C\uC785: before.\uC544\uBE60\uAC1C\uC785, \uAC1C\uC785\uC694\uCCAD\uB0B4\uC6A9: before.\uAC1C\uC785\uC694\uCCAD\uB0B4\uC6A9 },
-    reminder: "\uC9C4\uD589 \uC911 \uC911\uC694\uD55C \uACB0\uACFC\xB7\uACB0\uC815\xB7\uBB38\uC81C\xB7\uB2E4\uC74C \uB2E8\uACC4\uB294 task_update\uB85C \uC218\uC2DC \uAE30\uB85D\uD558\uACE0, \uB05D\uB0BC \uB54C\uB294 \uBC18\uB4DC\uC2DC task_finish\uB85C \uC885\uB8CC \uAC8C\uC774\uD2B8\uB97C \uD1B5\uACFC\uD558\uC138\uC694."
+    reminder: "\uC9C4\uD589 \uC911 \uAE30\uB85D\uC740 task_update, \uB05D\uB0BC \uB54C\uB294 task_finish(\uC885\uB8CC \uAC8C\uC774\uD2B8). \uC808\uCC28\uC758 \uC815\uBCF8\uC740 \uC6B4\uC601\uADDC\uCE59 \u300C\uC791\uC5C5 \uC6D0\uC7A5 \uC0AC\uC6A9 \uC808\uCC28\u300D(rules_get)."
   };
 }
 async function taskUpdate(a) {
   const { page, props } = await readTask(a.id);
+  const pol = await getPolicy();
   const p = {};
-  if (a.progress)
-    p.\uC791\uC5C5\uB0B4\uC6A9 = appendRt(page, "\uC791\uC5C5\uB0B4\uC6A9", a.progress);
-  if (a.decision)
-    p.\uACB0\uC815\uC0AC\uD56D = appendRt(page, "\uACB0\uC815\uC0AC\uD56D", a.decision);
-  if (a.files)
-    p.\uAD00\uB828\uD30C\uC77C = appendRt(page, "\uAD00\uB828\uD30C\uC77C", a.files);
-  if (a.commits)
-    p["Git Commit"] = appendRt(page, "Git Commit", a.commits);
-  if (a.note)
-    p.\uBE44\uACE0 = appendRt(page, "\uBE44\uACE0", a.note);
+  let progress = a.progress;
   if (a.priority) {
-    if (!AI_PRIORITIES.includes(a.priority))
-      throw new Error("AI\uB294 \uC0C1/\uC911/\uD558\uB9CC \uC9C0\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4 (\uCD5C\uC0C1\xB7\uCD5C\uD558\uB294 \uC544\uBE60 \uC804\uC6A9).");
-    if (["\uCD5C\uC0C1", "\uCD5C\uD558"].includes(props["\uC6B0\uC120\uC21C\uC704"]))
-      throw new Error(`\uD604\uC7AC \uC6B0\uC120\uC21C\uC704 '${props["\uC6B0\uC120\uC21C\uC704"]}'\uB294 \uC544\uBE60\uAC00 \uC9C0\uC815\uD55C \uAC12\uC774\uB77C AI\uAC00 \uBC14\uAFB8\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
-    p.\uC6B0\uC120\uC21C\uC704 = { select: { name: a.priority } };
+    await checkPriority(a.priority, a.dad_instruction);
+    if (pol.dadOnlyPriorities.includes(props[PROPS.priority]) && !hasDadInstruction(a.dad_instruction))
+      throw new Error(`\uD604\uC7AC \uC6B0\uC120\uC21C\uC704 '${props[PROPS.priority]}'\uB294 \uC544\uBE60\uAC00 \uC9C0\uC815\uD55C \uAC12\uC774\uB77C \uC544\uBE60 \uC9C0\uC2DC(dad_instruction) \uC5C6\uC774 \uBC14\uAFB8\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.`);
+    p[PROPS.priority] = { select: { name: a.priority } };
+    if (a.dad_instruction)
+      progress = `${progress ? progress + "\n" : ""}\uC6B0\uC120\uC21C\uC704 ${props[PROPS.priority] ?? "-"} \u2192 ${a.priority} (\uC544\uBE60 \uC9C0\uC2DC: ${a.dad_instruction})`;
   }
+  if (progress)
+    p[PROPS.content] = appendRt(page, PROPS.content, progress);
+  if (a.decision)
+    p[PROPS.decision] = appendRt(page, PROPS.decision, a.decision);
+  if (a.files)
+    p[PROPS.files] = appendRt(page, PROPS.files, a.files);
+  if (a.commits)
+    p[PROPS.commits] = appendRt(page, PROPS.commits, a.commits);
+  if (a.note)
+    p[PROPS.note] = appendRt(page, PROPS.note, a.note);
   if (a.intervention) {
-    if (a.intervention.type !== "\uC5C6\uC74C" && !(a.intervention.request || "").trim())
-      throw new Error("\uC758\uC0AC\uACB0\uC815/\uC9C1\uC811\uC870\uC791\uC774\uBA74 request(\uC544\uBE60\uAC00 \uBB34\uC5C7\uC744 \uD574\uC57C \uD558\uB294\uC9C0)\uB97C \uAD6C\uCCB4\uC801\uC73C\uB85C \uC801\uC5B4\uC57C \uD569\uB2C8\uB2E4.");
-    p["\uC544\uBE60 \uAC1C\uC785"] = { select: { name: a.intervention.type } };
-    p["\uAC1C\uC785 \uC694\uCCAD \uB0B4\uC6A9"] = { rich_text: a.intervention.type === "\uC5C6\uC74C" ? [] : rt(a.intervention.request) };
+    await checkIntervention(a.intervention);
+    p[PROPS.intervention] = { select: { name: a.intervention.type } };
+    p[PROPS.interventionReq] = { rich_text: a.intervention.type === INTERVENTION_NONE ? [] : rt(a.intervention.request) };
   }
   if (!Object.keys(p).length)
     throw new Error("\uAE30\uB85D\uD560 \uB0B4\uC6A9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
   await api("PATCH", `/pages/${page.id}`, { properties: p });
-  audit({ tool: "task_update", id: page.id, keys: Object.keys(p) });
+  audit({ tool: "task_update", id: page.id, keys: Object.keys(p), caller: currentCaller(), dad_instruction: a.dad_instruction });
   const after = await readTask(page.id);
   const problems = [];
-  if (a.progress && !(after.props["\uC791\uC5C5\uB0B4\uC6A9"] || "").includes(a.progress.slice(0, 50)))
+  if (progress && !(after.props[PROPS.content] || "").includes(progress.slice(0, 50)))
     problems.push("\uC791\uC5C5\uB0B4\uC6A9 \uBBF8\uBC18\uC601");
-  if (a.intervention && after.props["\uC544\uBE60 \uAC1C\uC785"] !== a.intervention.type)
+  if (a.intervention && after.props[PROPS.intervention] !== a.intervention.type)
     problems.push("\uC544\uBE60 \uAC1C\uC785 \uBBF8\uBC18\uC601");
-  if (a.priority && after.props["\uC6B0\uC120\uC21C\uC704"] !== a.priority)
+  if (a.priority && after.props[PROPS.priority] !== a.priority)
     problems.push("\uC6B0\uC120\uC21C\uC704 \uBBF8\uBC18\uC601");
-  return { verified: problems.length === 0, problems, status: after.props["\uC0C1\uD0DC"], note: "\uC0C1\uD0DC \uBCC0\uACBD(\uC644\uB8CC\xB7\uB300\uAE30\xB7\uBCF4\uB958)\uC740 task_finish\uB85C \uD569\uB2C8\uB2E4." };
+  return { verified: problems.length === 0, problems, status: after.props[PROPS.status], note: "\uC0C1\uD0DC \uBCC0\uACBD\uC740 task_finish\uB85C \uD569\uB2C8\uB2E4." };
 }
 async function taskFinish(a) {
   const { page, props } = await readTask(a.id);
-  const before = props["\uC0C1\uD0DC"];
+  const pol = await getPolicy();
+  const S = STATUS_NAMES;
+  const before = props[PROPS.status];
   const errs = [];
+  const warnings = [];
+  if (!pol.statuses.includes(a.outcome))
+    errs.push(`outcome '${a.outcome}'\uB294 \uC791\uC5C5 \uC6D0\uC7A5 \uC0C1\uD0DC \uC120\uD0DD\uC9C0\uC5D0 \uC5C6\uC74C: ${pol.statuses.join("/")}`);
   if (!a.result?.trim())
     errs.push("result(\uC2E4\uC81C \uACB0\uACFC)\uAC00 \uBE44\uC5B4 \uC788\uC74C");
-  if (a.outcome === "\uC644\uB8CC") {
+  if (a.outcome === S.done) {
     if (!a.verification?.trim() || a.verification.trim().length < 10)
       errs.push("\uC644\uB8CC\uD558\uB824\uBA74 verification(\uC2E4\uC81C \uAC80\uC99D \uACB0\uACFC)\uC744 \uAD6C\uCCB4\uC801\uC73C\uB85C \uC801\uC5B4\uC57C \uD568 \u2014 \uC870\uC0AC\xB7\uCF54\uB4DC \uC791\uC131\xB7\uBCF4\uACE0\uB9CC\uC73C\uB85C\uB294 \uC644\uB8CC \uBD88\uAC00");
     if (a.needs_dad_confirmation && !a.dad_confirmed?.trim())
-      errs.push("\uC544\uBE60 \uD655\uC778\uC774 \uC131\uACF5\uC870\uAC74\uC778 \uC791\uC5C5\uC740 \uC544\uBE60 \uD655\uC778 \uC804 \uC644\uB8CC \uBD88\uAC00 \u2192 outcome=\uC9C4\uD589\uC911 + needs_dad_confirmation=true\uB85C '\uC544\uBE60 \uD655\uC778\uB300\uAE30'\uB97C \uAE30\uB85D\uD558\uC138\uC694");
+      errs.push("\uC544\uBE60 \uD655\uC778\uC774 \uC131\uACF5\uC870\uAC74\uC778 \uC791\uC5C5\uC740 \uC544\uBE60 \uD655\uC778 \uC804 \uC644\uB8CC \uBD88\uAC00 \u2192 \uC9C4\uD589 \uC0C1\uD0DC \uC720\uC9C0 + needs_dad_confirmation=true\uB85C '\uC544\uBE60 \uD655\uC778\uB300\uAE30'\uB97C \uAE30\uB85D\uD558\uC138\uC694");
     if (a.unresolved?.trim())
       errs.push("\uBBF8\uD574\uACB0(unresolved)\uC774 \uB0A8\uC544 \uC788\uB294\uB370 \uC644\uB8CC\uB85C \uB2EB\uC73C\uB824 \uD568 \u2014 \uBCC4\uAC1C \uD6C4\uC18D\uC774\uBA74 \uB530\uB85C \uB4F1\uB85D\uD558\uACE0 unresolved\uB97C \uBE44\uC6B0\uC138\uC694");
+  } else if (!(a.next_steps?.trim() || a.waiting_for?.trim() || a.hold_reason?.trim())) {
+    errs.push("\uC644\uB8CC\uAC00 \uC544\uB2C8\uBA74 \uB2E4\uC74C \uB2E8\uACC4(next_steps)\xB7\uAE30\uB2E4\uB9AC\uB294 \uC678\uBD80 \uC870\uAC74(waiting_for)\xB7\uC911\uB2E8 \uC774\uC720(hold_reason) \uC911 \uD558\uB098\uB294 \uC801\uC5B4\uC57C \uD568 \u2014 \uC6B4\uC601\uADDC\uCE59 \u300C\uC791\uC5C5 \uC6D0\uC7A5 \uC0AC\uC6A9 \uC808\uCC28\u300D");
   }
-  if (a.outcome === "\uC9C4\uD589\uC911" && !a.next_steps?.trim())
-    errs.push("\uC9C4\uD589\uC911 \uC720\uC9C0 \uC2DC \uC815\uD655\uD55C next_steps \uD544\uC218");
-  if (a.outcome === "\uB300\uAE30" && !a.waiting_for?.trim())
-    errs.push("\uB300\uAE30\uB294 \uC2A4\uC2A4\uB85C \uD574\uC18C\uD560 \uC218 \uC5C6\uB294 \uC678\uBD80 \uC870\uAC74\uC77C \uB54C\uB9CC \u2014 waiting_for(\uBB34\uC5C7\uC744 \uAE30\uB2E4\uB9AC\uB294\uC9C0) \uD544\uC218. '\uB2E4\uC74C \uC9C0\uC2DC \uB300\uAE30'\uB294 \uB300\uAE30\uAC00 \uC544\uB2C8\uB77C \uBBF8\uCC29\uC218/\uC9C4\uD589\uC911");
-  if (a.outcome === "\uB300\uAE30" && a.waiting_for && /다음\s*(지시|작업|일)|지시를?\s*기다/.test(a.waiting_for))
-    errs.push("'\uB2E4\uC74C \uC9C0\uC2DC\uB97C \uAE30\uB2E4\uB9BC'\uC740 \uB300\uAE30 \uC0AC\uC720\uAC00 \uC544\uB2D8 (\uC6B4\uC601\uADDC\uCE59 \uC0C1\uD0DC \uC758\uBBF8)");
-  if (a.outcome === "\uBCF4\uB958" && !a.hold_reason?.trim())
-    errs.push("\uBCF4\uB958\uB294 \uC758\uB3C4\uC801 \uC911\uB2E8 \uACB0\uC815\uC77C \uB54C\uB9CC \u2014 hold_reason \uD544\uC218");
-  if (a.outcome === "\uBCF4\uB958" && a.hold_reason && /아빠\s*(부재|없|외출)|장비|장소/.test(a.hold_reason))
-    errs.push("\uC544\uBE60 \uBD80\uC7AC\xB7\uC7A5\uC18C\xB7\uC7A5\uBE44 \uBB38\uC81C\uB294 \uBCF4\uB958 \uC0AC\uC720\uAC00 \uC544\uB2D8 (\uC6B4\uC601\uADDC\uCE59 23) \u2014 \uC544\uBE60 \uAC1C\uC785 \uC18D\uC131\uC744 \uC4F0\uC138\uC694");
+  if (a.outcome === S.waiting && !a.waiting_for?.trim())
+    errs.push("\uB300\uAE30\uB294 \uBB34\uC5C7\uC744 \uAE30\uB2E4\uB9AC\uB294\uC9C0(waiting_for) \uD544\uC218 \u2014 \uC6B4\uC601\uADDC\uCE59 \u300C\uC0C1\uD0DC \uC758\uBBF8\u300D");
+  if (a.outcome === S.hold && !a.hold_reason?.trim())
+    errs.push("\uBCF4\uB958\uB294 \uC774\uC720(hold_reason) \uD544\uC218 \u2014 \uC6B4\uC601\uADDC\uCE59 \u300C\uC0C1\uD0DC \uC758\uBBF8\u300D");
+  if (a.outcome === S.waiting && a.waiting_for && /다음\s*(지시|작업|일)|지시를?\s*기다/.test(a.waiting_for))
+    warnings.push("'\uB2E4\uC74C \uC9C0\uC2DC\uB97C \uAE30\uB2E4\uB9BC'\uC740 \uC6B4\uC601\uADDC\uCE59\uC0C1 \uB300\uAE30\uAC00 \uC544\uB2C8\uB77C \uBBF8\uCC29\uC218\uC77C \uC218 \uC788\uC2B5\uB2C8\uB2E4 \u2014 \uD655\uC778\uD558\uC138\uC694.");
+  if (a.outcome === S.hold && a.hold_reason && /아빠\s*(부재|없|외출)|장비|장소/.test(a.hold_reason))
+    warnings.push("\uC544\uBE60 \uBD80\uC7AC\xB7\uC7A5\uC18C\xB7\uC7A5\uBE44 \uBB38\uC81C\uB294 \uC6B4\uC601\uADDC\uCE59\uC0C1 \uBCF4\uB958\uAC00 \uC544\uB2C8\uB77C \uC544\uBE60 \uAC1C\uC785 \uC18D\uC131\uC77C \uC218 \uC788\uC2B5\uB2C8\uB2E4 \u2014 \uD655\uC778\uD558\uC138\uC694.");
+  if (a.intervention) {
+    try {
+      await checkIntervention(a.intervention);
+    } catch (e) {
+      errs.push(e.message);
+    }
+  }
   if (errs.length)
-    return { finished: false, gate: "rejected", errors: errs, status_unchanged: before };
-  const lines = [`\uC791\uC5C5 \uC885\uB8CC \uCC98\uB9AC(${before} \u2192 ${a.outcome}${a.needs_dad_confirmation && a.outcome === "\uC9C4\uD589\uC911" ? ", \uC544\uBE60 \uD655\uC778\uB300\uAE30" : ""})`, `\uACB0\uACFC: ${a.result}`];
+    return { finished: false, gate: "rejected", errors: errs, warnings, status_unchanged: before };
+  const lines = [`\uC791\uC5C5 \uC885\uB8CC \uCC98\uB9AC(${before} \u2192 ${a.outcome}${a.needs_dad_confirmation && a.outcome !== S.done ? ", \uC544\uBE60 \uD655\uC778\uB300\uAE30" : ""})`, `\uACB0\uACFC: ${a.result}`];
   if (a.verification)
     lines.push(`\uAC80\uC99D: ${a.verification}`);
   if (a.unresolved)
@@ -40247,67 +40690,62 @@ async function taskFinish(a) {
     lines.push(`\uBCF4\uB958 \uC0AC\uC720: ${a.hold_reason}`);
   if (a.dad_confirmed)
     lines.push(`\uC544\uBE60 \uD655\uC778: ${a.dad_confirmed}`);
-  const p = { \uC0C1\uD0DC: { select: { name: a.outcome } }, \uC791\uC5C5\uB0B4\uC6A9: appendRt(page, "\uC791\uC5C5\uB0B4\uC6A9", lines.join("\n")) };
+  const p = { [PROPS.status]: { select: { name: a.outcome } }, [PROPS.content]: appendRt(page, PROPS.content, lines.join("\n")) };
   if (a.files)
-    p.\uAD00\uB828\uD30C\uC77C = appendRt(page, "\uAD00\uB828\uD30C\uC77C", a.files);
+    p[PROPS.files] = appendRt(page, PROPS.files, a.files);
   if (a.commits)
-    p["Git Commit"] = appendRt(page, "Git Commit", a.commits);
-  if (a.outcome === "\uC644\uB8CC") {
-    p.\uC644\uB8CC\uC77C\uC2DC = { date: { start: (/* @__PURE__ */ new Date()).toISOString() } };
-    p["\uC544\uBE60 \uAC1C\uC785"] = { select: { name: "\uC5C6\uC74C" } };
-    p["\uAC1C\uC785 \uC694\uCCAD \uB0B4\uC6A9"] = { rich_text: [] };
-    p.\uD655\uC778\uD544\uC694 = { checkbox: false };
+    p[PROPS.commits] = appendRt(page, PROPS.commits, a.commits);
+  if (a.outcome === S.done) {
+    p[PROPS.doneAt] = { date: { start: (/* @__PURE__ */ new Date()).toISOString() } };
+    p[PROPS.intervention] = { select: { name: INTERVENTION_NONE } };
+    p[PROPS.interventionReq] = { rich_text: [] };
+    p[PROPS.needsCheck] = { checkbox: false };
   } else {
-    if (props["\uC644\uB8CC\uC77C\uC2DC"])
-      p.\uC644\uB8CC\uC77C\uC2DC = { date: null };
+    if (props[PROPS.doneAt])
+      p[PROPS.doneAt] = { date: null };
     if (a.needs_dad_confirmation !== void 0)
-      p.\uD655\uC778\uD544\uC694 = { checkbox: !!a.needs_dad_confirmation };
+      p[PROPS.needsCheck] = { checkbox: !!a.needs_dad_confirmation };
     if (a.intervention) {
-      if (a.intervention.type !== "\uC5C6\uC74C" && !a.intervention.request?.trim())
-        return { finished: false, gate: "rejected", errors: ["intervention.request \uD544\uC694"], status_unchanged: before };
-      p["\uC544\uBE60 \uAC1C\uC785"] = { select: { name: a.intervention.type } };
-      p["\uAC1C\uC785 \uC694\uCCAD \uB0B4\uC6A9"] = { rich_text: a.intervention.type === "\uC5C6\uC74C" ? [] : rt(a.intervention.request) };
+      p[PROPS.intervention] = { select: { name: a.intervention.type } };
+      p[PROPS.interventionReq] = { rich_text: a.intervention.type === INTERVENTION_NONE ? [] : rt(a.intervention.request) };
     }
   }
   await api("PATCH", `/pages/${page.id}`, { properties: p });
-  audit({ tool: "task_finish", id: page.id, from: before, to: a.outcome });
+  audit({ tool: "task_finish", id: page.id, from: before, to: a.outcome, caller: currentCaller() });
   const re = await readTask(page.id);
   const checks = [
-    { check: "\uC0C1\uD0DC", ok: re.props["\uC0C1\uD0DC"] === a.outcome, actual: re.props["\uC0C1\uD0DC"] },
-    { check: "\uC885\uB8CC\uAE30\uB85D", ok: (re.props["\uC791\uC5C5\uB0B4\uC6A9"] || "").includes(`\uACB0\uACFC: ${a.result}`.slice(0, 60)) }
+    { check: "\uC0C1\uD0DC", ok: re.props[PROPS.status] === a.outcome, actual: re.props[PROPS.status] },
+    { check: "\uC885\uB8CC\uAE30\uB85D", ok: (re.props[PROPS.content] || "").includes(`\uACB0\uACFC: ${a.result}`.slice(0, 60)) }
   ];
-  if (a.outcome === "\uC644\uB8CC") {
-    checks.push({ check: "\uC644\uB8CC\uC77C\uC2DC", ok: !!re.props["\uC644\uB8CC\uC77C\uC2DC"], actual: re.props["\uC644\uB8CC\uC77C\uC2DC"] });
-    checks.push({ check: "\uC544\uBE60 \uAC1C\uC785=\uC5C6\uC74C", ok: re.props["\uC544\uBE60 \uAC1C\uC785"] === "\uC5C6\uC74C" || re.props["\uC544\uBE60 \uAC1C\uC785"] == null });
+  if (a.outcome === S.done) {
+    checks.push({ check: "\uC644\uB8CC\uC77C\uC2DC", ok: !!re.props[PROPS.doneAt], actual: re.props[PROPS.doneAt] });
+    checks.push({ check: "\uC544\uBE60 \uAC1C\uC785=\uC5C6\uC74C", ok: re.props[PROPS.intervention] === INTERVENTION_NONE || re.props[PROPS.intervention] == null });
   } else
-    checks.push({ check: "\uC644\uB8CC\uC77C\uC2DC \uBE44\uC5B4 \uC788\uC74C", ok: !re.props["\uC644\uB8CC\uC77C\uC2DC"], actual: re.props["\uC644\uB8CC\uC77C\uC2DC"] });
-  if (a.needs_dad_confirmation !== void 0 && a.outcome !== "\uC644\uB8CC")
-    checks.push({ check: "\uD655\uC778\uD544\uC694", ok: re.props["\uD655\uC778\uD544\uC694"] === !!a.needs_dad_confirmation });
-  return { finished: true, verified: checks.every((c) => c.ok), checks, task: summarize(re.page, re.props) };
+    checks.push({ check: "\uC644\uB8CC\uC77C\uC2DC \uBE44\uC5B4 \uC788\uC74C", ok: !re.props[PROPS.doneAt], actual: re.props[PROPS.doneAt] });
+  if (a.needs_dad_confirmation !== void 0 && a.outcome !== S.done)
+    checks.push({ check: "\uD655\uC778\uD544\uC694", ok: re.props[PROPS.needsCheck] === !!a.needs_dad_confirmation });
+  return { finished: true, verified: checks.every((c) => c.ok), checks, warnings, task: summarize(re.page, re.props) };
 }
-var RULE_ALIASES = {
-  \uC6B4\uC601\uADDC\uCE59: IDS.rules,
-  "woo's \uBA54\uBAA8\uB9AC\uD5C8\uBE0C \uC6B4\uC601\uADDC\uCE59": IDS.rules,
-  rules: IDS.rules,
-  "\uC2E4\uD589\xB7\uC885\uB8CC": IDS.rulesExec,
-  "AI \uC791\uC5C5\uC790 \uC2E4\uD589\xB7\uC885\uB8CC \uADDC\uCE59": IDS.rulesExec,
-  exec: IDS.rulesExec,
-  \uC815\uCCB4\uC131: IDS.rulesIdentity,
-  "AI \uAC00\uC871\xB7\uC791\uC5C5\uC790 \uC815\uCCB4\uC131 \uBC0F \uBA85\uCE6D \uADDC\uCE59": IDS.rulesIdentity,
-  identity: IDS.rulesIdentity,
-  "\uAC1C\uBC1C \uC8FC\uC758\uC0AC\uD56D": IDS.rulesDev,
-  "AI \uAC1C\uBC1C \uACF5\uD1B5 \uC8FC\uC758\uC0AC\uD56D": IDS.rulesDev,
-  dev: IDS.rulesDev
-};
-function ruleId(doc) {
-  const id = RULE_ALIASES[(doc || "\uC6B4\uC601\uADDC\uCE59").trim()] || doc;
-  const n = normId(id);
-  if (!RULE_DOCS.has(n))
-    throw new Error(`\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C\uAC00 \uC544\uB2D9\uB2C8\uB2E4: ${doc}. \uAC00\uB2A5: \uC6B4\uC601\uADDC\uCE59 / \uC2E4\uD589\xB7\uC885\uB8CC / \uC815\uCCB4\uC131 / \uAC1C\uBC1C \uC8FC\uC758\uC0AC\uD56D`);
-  return n;
+var SHORT = { rules: "\uC6B4\uC601\uADDC\uCE59", exec: "\uC2E4\uD589\xB7\uC885\uB8CC", identity: "\uC815\uCCB4\uC131", dev: "\uAC1C\uBC1C" };
+async function ruleId(doc) {
+  const ids = await ruleDocIds();
+  const p = await getPolicy();
+  const q = (SHORT[(doc || "").trim()] || doc || "").trim();
+  if (!q || q === "\uC6B4\uC601\uADDC\uCE59" || q === "woo's \uBA54\uBAA8\uB9AC\uD5C8\uBE0C \uC6B4\uC601\uADDC\uCE59")
+    return normId(IDS.rules);
+  try {
+    const n = normId(q);
+    if (ids.has(n))
+      return n;
+  } catch {
+  }
+  const hits = p.ruleDocs.filter((d) => d.title.includes(q));
+  if (hits.length === 1)
+    return hits[0].id;
+  throw new Error(`\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C\uB97C ${hits.length ? "\uD558\uB098\uB85C \uD2B9\uC815\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4" : "\uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4"}: ${doc}. \u300C\uACF5\uC6A9 \uADDC\uCE59 \uBB38\uC11C \uBAA9\uB85D\u300D: ${p.ruleDocs.map((d) => d.title).join(" / ")}`);
 }
 async function rulesGet(a) {
-  const id = ruleId(a.doc);
+  const id = await ruleId(a.doc);
   const p = await api("GET", `/pages/${id}`);
   let md = await blocksToMd(id, 0, 3, { n: 0, max: 3e3 });
   if (a.section) {
@@ -40315,21 +40753,23 @@ async function rulesGet(a) {
     const hit = parts.filter((s) => s.split("\n")[0].includes(a.section));
     md = hit.length ? hit.join("\n") : `(\uC139\uC158 "${a.section}" \uC5C6\uC74C)`;
   }
-  return { id, title: titleOf(p), last_edited_time: p.last_edited_time, markdown: md };
+  return { id, title: titleOf(p), last_edited_time: p.last_edited_time, available_docs: (await getPolicy()).ruleDocs.map((d) => d.title), markdown: md };
 }
 async function rulesUpdate(a) {
-  if (!a.dad_instruction || a.dad_instruction.trim().length < 8)
+  if (!hasDadInstruction(a.dad_instruction))
     throw new Error("\uC6B4\uC601\uADDC\uCE59 \uBCC0\uACBD\uC740 \uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC9C0\uC2DC\uAC00 \uC788\uC744 \uB54C\uB9CC \uD569\uB2C8\uB2E4. dad_instruction\uC5D0 \uC544\uBE60\uC758 \uC2E4\uC81C \uC9C0\uC2DC \uBB38\uAD6C\uB97C \uADF8\uB300\uB85C \uC801\uC73C\uC138\uC694.");
-  const id = ruleId(a.doc);
+  const id = await ruleId(a.doc);
   const res = a.mode === "append_section" ? await writeContent({ id, mode: "append", markdown: a.markdown }, true) : await writeContent({ id, mode: "replace_text", old_text: a.old_text, new_text: a.new_text }, true);
-  audit({ tool: "rules_update", id, mode: a.mode, dad_instruction: a.dad_instruction.slice(0, 300) });
+  audit({ tool: "rules_update", id, mode: a.mode, caller: currentCaller(), dad_instruction: a.dad_instruction.slice(0, 300) });
+  await getPolicy(true);
   return res;
 }
+var WORKLOG_TITLE = process.env.WOOS_WORKLOG_TITLE || "{y}\uB144 {m}\uC6D4 {d}\uC77C \uC791\uC5C5\uC77C\uC9C0";
 function worklogTitle(date5) {
   const m = date5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (!m)
     throw new Error("date\uB294 YYYY-MM-DD");
-  return `${Number(m[1])}\uB144 ${Number(m[2])}\uC6D4 ${Number(m[3])}\uC77C \uC791\uC5C5\uC77C\uC9C0`;
+  return WORKLOG_TITLE.replace("{y}", String(Number(m[1]))).replace("{m}", String(Number(m[2]))).replace("{d}", String(Number(m[3])));
 }
 async function findWorklog(date5) {
   const t = worklogTitle(date5);
@@ -40339,14 +40779,14 @@ async function findWorklog(date5) {
   return null;
 }
 async function worklogGet(a) {
-  const date5 = a.date || todayKst();
+  const date5 = a.date || await currentWorkday();
   const id = await findWorklog(date5);
   if (!id)
     return { exists: false, date: date5, title: worklogTitle(date5) };
   return { exists: true, date: date5, id, title: worklogTitle(date5), markdown: await blocksToMd(id, 0, 3) };
 }
 async function worklogWrite(a) {
-  const date5 = a.date || todayKst();
+  const date5 = a.date || await currentWorkday();
   let id = await findWorklog(date5);
   let created = false;
   if (!id) {
@@ -40358,10 +40798,10 @@ async function worklogWrite(a) {
     markCreated(id, "page", worklogTitle(date5), !!a.test_object);
   }
   const ids = await appendBlocks(id, mdToBlocks(a.markdown));
-  audit({ tool: "worklog_write", id, date: date5, created, blocks: ids.length });
+  audit({ tool: "worklog_write", id, date: date5, created, blocks: ids.length, caller: currentCaller() });
   const md = await blocksToMd(id, 0, 2);
   const probe = a.markdown.split("\n").map((l) => l.replace(/^[#>\-*\d.\s]+/, "").replace(/\*\*|`/g, "").trim()).find((l) => l.length > 3) || "";
-  return { id, created, appended_blocks: ids.length, verified: md.includes(probe.slice(0, 40)) };
+  return { id, date: date5, created, appended_blocks: ids.length, verified: md.includes(probe.slice(0, 40)) };
 }
 async function employeeFind(a) {
   if (a.id) {
@@ -40385,22 +40825,21 @@ async function employeeUpdate(a) {
     throw new Error("\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC758 \uD56D\uBAA9\uC774 \uC544\uB2D9\uB2C8\uB2E4.");
   const ds = await api("GET", `/data_sources/${IDS.employeeDs}`);
   await api("PATCH", `/pages/${id}`, { properties: buildProps(ds.properties, a.properties) });
-  audit({ tool: "employee_update", id, keys: Object.keys(a.properties) });
+  audit({ tool: "employee_update", id, keys: Object.keys(a.properties), caller: currentCaller() });
   const after = await simplifyProps(await api("GET", `/pages/${id}`));
   const mism = Object.entries(a.properties).filter(([k, v]) => !sameVal(after[k], v)).map(([k]) => k);
+  await getPolicy(true);
   return { verified: mism.length === 0, mismatches: mism, employee: after };
 }
 
 // dist/tools.js
 function buildServer() {
-  const server = new McpServer({ name: "woos-memoryhub", version: "1.0.0" }, {
+  const server = new McpServer({ name: "woos-memoryhub", version: "1.1.0" }, {
     instructions: [
       "WOO'S \uBA54\uBAA8\uB9AC\uD5C8\uBE0C MCP: \uC774 \uD1B5\uD569\uC774 \uC811\uADFC \uAD8C\uD55C\uC744 \uAC00\uC9C4 Notion \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4 \uC804\uCCB4\uB97C \uC870\uD68C\xB7\uAC80\uC0C9\xB7\uC0DD\uC131\xB7\uC218\uC815\xB7\uC774\uB3D9\xB7Relation\xB7\uC2A4\uD0A4\uB9C8\xB7\uD734\uC9C0\uD1B5 \uCC98\uB9AC\uD55C\uB2E4.",
+      "\uC5C5\uBB34 \uC6B4\uC601\uC815\uCC45\uC758 \uC815\uBCF8\uC740 Notion \u300Cwoo's \uBA54\uBAA8\uB9AC\uD5C8\uBE0C \uC6B4\uC601\uADDC\uCE59\u300D\uC774\uB2E4(rules_get). \uC774 MCP\uAC00 \uC2E4\uC81C\uB85C \uC801\uC6A9 \uC911\uC778 \uC815\uCC45 \uAC12\uC740 policy_get\uC73C\uB85C \uD655\uC778\uD55C\uB2E4.",
       "\uBAA8\uB4E0 \uC4F0\uAE30 \uB3C4\uAD6C\uB294 \uC2E4\uD589 \uD6C4 \uB2E4\uC2DC \uC870\uD68C\uD574 verified \uAC12\uC744 \uB3CC\uB824\uC900\uB2E4. verified=false\uBA74 \uC131\uACF5\uC73C\uB85C \uBCF4\uACE0\uD558\uC9C0 \uC54A\uB294\uB2E4.",
-      "\uC791\uC5C5 \uC6D0\uC7A5: \uB4F1\uB85D \uC804 task_search, \uC2E4\uC81C \uC2DC\uC791 \uC989\uC2DC task_start(\u2192\uC9C4\uD589\uC911), \uC9C4\uD589 \uC911 task_update, \uB05D\uB0BC \uB54C \uBC18\uB4DC\uC2DC task_finish(\uC885\uB8CC \uAC8C\uC774\uD2B8\xB7\uC7AC\uC870\uD68C \uAC80\uC99D).",
-      "\uC644\uB8CC(task_finish outcome=\uC644\uB8CC)\uB294 \uC0AD\uC81C\uAC00 \uC544\uB2C8\uB2E4. \uD734\uC9C0\uD1B5\uC740 trash_prepare(\uB300\uC0C1 \uC7AC\uC870\uD68C\xB7\uC2B9\uC778\uD1A0\uD070) \u2192 trash_execute(\uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC0AD\uC81C \uC9C0\uC2DC \uADFC\uAC70) 2\uB2E8\uACC4\uB85C\uB9CC \uAC00\uB2A5\uD558\uBA70, \uD575\uC2EC \uAC1D\uCCB4(\uC6B4\uC601\uADDC\uCE59\xB7\uC791\uC5C5 \uC6D0\uC7A5\xB7\uC9C1\uC6D0\xB7\uD504\uB85C\uC81D\uD2B8 DB \uB4F1)\uB294 MCP\uB85C \uD734\uC9C0\uD1B5 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uB2E4.",
-      "\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C\uB294 \uC77C\uBC18 \uC4F0\uAE30 \uB3C4\uAD6C\uB85C \uC218\uC815\uD560 \uC218 \uC5C6\uACE0 rules_update(\uC544\uBE60 \uC9C0\uC2DC \uBB38\uAD6C \uD544\uC218)\uB85C\uB9CC \uC218\uC815\uD55C\uB2E4.",
-      "AI\uB294 \uC6B0\uC120\uC21C\uC704\uB97C \uC0C1/\uC911/\uD558\uB9CC \uC9C0\uC815\uD55C\uB2E4(\uCD5C\uC0C1\xB7\uCD5C\uD558\uB294 \uC544\uBE60 \uC804\uC6A9)."
+      "\uC548\uC804\uC7A5\uCE58(\uCF54\uB4DC \uAC15\uC81C): \uD734\uC9C0\uD1B5\uC740 trash_prepare \u2192 trash_execute 2\uB2E8\uACC4\uC640 \uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC0AD\uC81C \uC9C0\uC2DC\uB85C\uB9CC, \uBCF4\uD638 \uAC1D\uCCB4\uB294 \uD734\uC9C0\uD1B5 \uBD88\uAC00\xB7\uC774\uB3D9\uC740 \uC544\uBE60 \uC9C0\uC2DC \uD544\uC694, \uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C\uB294 rules_update\uB85C\uB9CC, \uC791\uC5C5 \uC6D0\uC7A5 \uC0C1\uD0DC \uBCC0\uACBD\uC740 task_start/task_finish\uB85C\uB9CC. api_request\uB3C4 \uAC19\uC740 \uAE30\uC900\uC73C\uB85C \uAC80\uC0AC\uD55C\uB2E4."
     ].join("\n")
   });
   const ok = (data) => ({ content: [{ type: "text", text: JSON.stringify(data, null, 1) }] });
@@ -40416,7 +40855,9 @@ function buildServer() {
   }
   const Id = external_exports.string().describe("Notion ID \uB610\uB294 URL");
   const Any = external_exports.record(external_exports.string(), external_exports.any());
-  const Intervention = external_exports.object({ type: external_exports.enum(["\uC5C6\uC74C", "\uC758\uC0AC\uACB0\uC815", "\uC9C1\uC811\uC870\uC791"]), request: external_exports.string().optional() });
+  const Intervention = external_exports.object({ type: external_exports.string().describe("\uC791\uC5C5 \uC6D0\uC7A5 '\uC544\uBE60 \uAC1C\uC785' \uC120\uD0DD\uC9C0 \uAC12(policy_get)"), request: external_exports.string().optional() });
+  const DadInstruction = external_exports.string().optional().describe("\uC544\uBE60\uC758 \uC2E4\uC81C \uC9C0\uC2DC \uBB38\uAD6C \u2014 \uC6B4\uC601\uADDC\uCE59\uC0C1 \uC544\uBE60 \uC804\uC6A9 \uAC12\xB7\uBCF4\uD638 \uAC1D\uCCB4 \uC791\uC5C5\uC5D0 \uD544\uC694");
+  tool("policy_get", "\uC774 MCP\uAC00 \uC9C0\uAE08 Notion\uC5D0\uC11C \uC77D\uC5B4 \uC801\uC6A9 \uC911\uC778 \uC6B4\uC601\uC815\uCC45(\uC0C1\uD0DC\xB7\uC6B0\uC120\uC21C\uC704\xB7\uC544\uBE60 \uC804\uC6A9 \uAC12\xB7\uC791\uC5C5\uC77C \uAE30\uC900\xB7\uADDC\uCE59 \uBB38\uC11C \uBAA9\uB85D\xB7\uC9C1\uC6D0 \uC774\uB984)\uACFC \uCD9C\uCC98\xB7\uB300\uCCB4\uAC12 \uC0AC\uC6A9 \uC5EC\uBD80. refresh=true\uBA74 \uCE90\uC2DC\uB97C \uBB34\uC2DC\uD558\uACE0 \uB2E4\uC2DC \uC77D\uB294\uB2E4.", { refresh: external_exports.boolean().optional() }, (a) => policySummary(!!a.refresh));
   tool("search", "\uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4 \uAC80\uC0C9(\uC81C\uBAA9). type\uC73C\uB85C page/data_source \uC81C\uD55C. scope_id\uB97C \uC8FC\uBA74 \uADF8 \uD398\uC774\uC9C0/DB \uD558\uC704\uB85C \uD55C\uC815, include_content=true\uBA74 \uBC94\uC704 \uB0B4 \uBCF8\uBB38\uAE4C\uC9C0 \uAC80\uC0C9(search_everything).", {
     query: external_exports.string(),
     type: external_exports.enum(["page", "data_source", "all"]).optional(),
@@ -40438,7 +40879,7 @@ function buildServer() {
     limit: external_exports.number().optional(),
     include_properties: external_exports.boolean().optional()
   }, query);
-  tool("create_page", "\uD398\uC774\uC9C0 \uC0DD\uC131. parent_id\uAC00 \uD398\uC774\uC9C0\uBA74 \uC77C\uBC18 \uD558\uC704 \uD398\uC774\uC9C0, DB/\uB370\uC774\uD130\uC18C\uC2A4\uBA74 \uB808\uCF54\uB4DC(properties \uB2E8\uC21C\uAC12). content_markdown\uC73C\uB85C \uBCF8\uBB38 \uC791\uC131. \uC2E4\uAC80\uC99D\uC6A9\uC774\uBA74 test_object=true.", {
+  tool("create_page", "\uD398\uC774\uC9C0 \uC0DD\uC131. parent_id\uAC00 \uD398\uC774\uC9C0\uBA74 \uC77C\uBC18 \uD558\uC704 \uD398\uC774\uC9C0, DB/\uB370\uC774\uD130\uC18C\uC2A4\uBA74 \uB808\uCF54\uB4DC(properties \uB2E8\uC21C\uAC12). content_markdown\uC73C\uB85C \uBCF8\uBB38 \uC791\uC131. \uC2E4\uAC80\uC99D\uC6A9\uC774\uBA74 test_object=true(\uC81C\uBAA9\uC5D0 \uD14C\uC2A4\uD2B8 \uC811\uB450\uC5B4). \uC791\uC5C5 \uC6D0\uC7A5 \uB808\uCF54\uB4DC\uB294 task_create\uB85C.", {
     parent_id: Id,
     title: external_exports.string(),
     properties: Any.optional(),
@@ -40446,7 +40887,7 @@ function buildServer() {
     icon: external_exports.string().optional(),
     test_object: external_exports.boolean().optional()
   }, createPage);
-  tool("update_page", "\uD398\uC774\uC9C0 \uC81C\uBAA9\xB7\uC18D\uC131\xB7\uC544\uC774\uCF58 \uC218\uC815 \uD6C4 \uC7AC\uC870\uD68C \uAC80\uC99D. \uC18D\uC131\uAC12: \uD14D\uC2A4\uD2B8/\uC22B\uC790/select \uC774\uB984/multi_select \uBC30\uC5F4/date 'YYYY-MM-DD' \uB610\uB294 {start,end}/checkbox/relation ID \uBC30\uC5F4/null=\uBE44\uC6B0\uAE30.", {
+  tool("update_page", "\uD398\uC774\uC9C0 \uC81C\uBAA9\xB7\uC18D\uC131\xB7\uC544\uC774\uCF58 \uC218\uC815 \uD6C4 \uC7AC\uC870\uD68C \uAC80\uC99D. \uC18D\uC131\uAC12: \uD14D\uC2A4\uD2B8/\uC22B\uC790/select \uC774\uB984/multi_select \uBC30\uC5F4/date 'YYYY-MM-DD' \uB610\uB294 {start,end}/checkbox/relation ID \uBC30\uC5F4/null=\uBE44\uC6B0\uAE30. \uC791\uC5C5 \uC6D0\uC7A5\uC758 \uC0C1\uD0DC\xB7\uC644\uB8CC\uC77C\uC2DC\uB294 task_finish\uB85C.", {
     id: Id,
     title: external_exports.string().optional(),
     properties: Any.optional(),
@@ -40473,7 +40914,7 @@ function buildServer() {
     properties: Any,
     test_object: external_exports.boolean().optional()
   }, createDatabase);
-  tool("update_schema", "DB/\uB370\uC774\uD130\uC18C\uC2A4 \uC2A4\uD0A4\uB9C8 \uC218\uC815: add(\uC18D\uC131 \uCD94\uAC00), rename({\uC61B:\uC0C8}), remove(\uC18D\uC131 \uC0AD\uC81C), change_options({\uC18D\uC131:[\uC120\uD0DD\uC9C0..]}), title.", {
+  tool("update_schema", "DB/\uB370\uC774\uD130\uC18C\uC2A4 \uC2A4\uD0A4\uB9C8 \uC218\uC815: add(\uC18D\uC131 \uCD94\uAC00), rename({\uC61B:\uC0C8}), remove(\uC18D\uC131 \uC0AD\uC81C), change_options({\uC18D\uC131:[\uC120\uD0DD\uC9C0..]}), title. \uBCF4\uD638 DB\uB294 \uCD94\uAC00\uB9CC \uD5C8\uC6A9(\uC0AD\uC81C\xB7\uC774\uB984\uBCC0\uACBD\xB7\uC120\uD0DD\uC9C0 \uC0AD\uC81C \uAE08\uC9C0).", {
     id: Id,
     title: external_exports.string().optional(),
     add: Any.optional(),
@@ -40481,9 +40922,9 @@ function buildServer() {
     remove: external_exports.array(external_exports.string()).optional(),
     change_options: external_exports.record(external_exports.string(), external_exports.array(external_exports.string())).optional()
   }, updateSchema);
-  tool("move", "\uD398\uC774\uC9C0\uB97C \uB2E4\uB978 \uD398\uC774\uC9C0/DB \uC544\uB798\uB85C, DB(\uB610\uB294 \uADF8 \uB370\uC774\uD130\uC18C\uC2A4)\uB97C \uB2E4\uB978 \uD398\uC774\uC9C0 \uC544\uB798\uB85C \uC774\uB3D9 \uD6C4 \uBD80\uBAA8 \uC7AC\uC870\uD68C \uAC80\uC99D.", { id: Id, new_parent_id: Id }, move);
+  tool("move", "\uD398\uC774\uC9C0\uB97C \uB2E4\uB978 \uD398\uC774\uC9C0/DB \uC544\uB798\uB85C, DB(\uB610\uB294 \uADF8 \uB370\uC774\uD130\uC18C\uC2A4)\uB97C \uB2E4\uB978 \uD398\uC774\uC9C0 \uC544\uB798\uB85C \uC774\uB3D9 \uD6C4 \uBD80\uBAA8 \uC7AC\uC870\uD68C \uAC80\uC99D. \uBCF4\uD638 \uAC1D\uCCB4 \uC774\uB3D9\uC740 dad_instruction \uD544\uC218.", { id: Id, new_parent_id: Id, dad_instruction: DadInstruction }, move);
   tool("trash_prepare", "\uD734\uC9C0\uD1B5 1\uB2E8\uACC4: \uB300\uC0C1(\uCD5C\uB300 20\uAC74)\uC758 \uD604\uC7AC \uC81C\uBAA9\xB7\uC885\uB958\xB7\uBD80\uBAA8\xB7\uD3EC\uD568 \uD56D\uBAA9 \uC218\uB97C \uC7AC\uC870\uD68C\uD558\uACE0 \uC2B9\uC778\uD1A0\uD070 \uBC1C\uAE09. \uBCF4\uD638 \uAC1D\uCCB4\uB294 \uAC70\uBD80. \uC2E4\uD589\uD558\uC9C0 \uC54A\uC74C.", { ids: external_exports.array(external_exports.string()) }, trashPrepare);
-  tool("trash_execute", "\uD734\uC9C0\uD1B5 2\uB2E8\uACC4: prepare\uC758 \uC2B9\uC778\uD1A0\uD070 + \uC2B9\uC778 \uADFC\uAC70\uB85C \uC2E4\uC81C \uD734\uC9C0\uD1B5 \uCC98\uB9AC \u2192 \uC7AC\uC870\uD68C\uB85C in_trash \uAC80\uC99D. \uAE30\uC874 \uB370\uC774\uD130\uB294 approved_by='\uC544\uBE60' + \uC544\uBE60\uC758 \uC2E4\uC81C \uC0AD\uC81C \uC9C0\uC2DC \uBB38\uAD6C \uD544\uC218. \uC774 MCP\uAC00 test_object\uB85C \uB9CC\uB4E0 \uAC1D\uCCB4\uB9CC approval='\uD14C\uC2A4\uD2B8 \uAC1D\uCCB4 \uC815\uB9AC'\uB85C \uCC98\uB9AC \uAC00\uB2A5.", {
+  tool("trash_execute", "\uD734\uC9C0\uD1B5 2\uB2E8\uACC4: \uC2B9\uC778\uD1A0\uD070 + \uC2B9\uC778 \uADFC\uAC70\uB85C \uC2E4\uC81C \uD734\uC9C0\uD1B5 \uCC98\uB9AC \u2192 \uC7AC\uC870\uD68C\uB85C in_trash \uAC80\uC99D. \uC2E4\uD589 \uC9C1\uC804 \uC804\uCCB4 \uB300\uC0C1\uC744 \uB2E4\uC2DC \uD655\uC778\uD574 \uD558\uB098\uB77C\uB3C4 \uBC14\uB00C\uC5C8\uAC70\uB098 \uC774\uBBF8 \uD734\uC9C0\uD1B5\uC774\uBA74(\uD1A0\uD070 \uC7AC\uC0AC\uC6A9) \uC544\uBB34\uAC83\uB3C4 \uD558\uC9C0 \uC54A\uB294\uB2E4. \uAE30\uC874 \uB370\uC774\uD130\uB294 approved_by='\uC544\uBE60' + \uC544\uBE60\uC758 \uC2E4\uC81C \uC0AD\uC81C \uC9C0\uC2DC \uBB38\uAD6C \uD544\uC218. test_object\uB85C \uB9CC\uB4E0 \uAC1D\uCCB4\uB9CC approval='\uD14C\uC2A4\uD2B8 \uAC1D\uCCB4 \uC815\uB9AC'\uB85C \uCC98\uB9AC \uAC00\uB2A5.", {
     approval_token: external_exports.string(),
     approval: external_exports.string().describe("\uC544\uBE60\uC758 \uC2E4\uC81C \uC0AD\uC81C \uC9C0\uC2DC \uBB38\uAD6C, \uB610\uB294 '\uD14C\uC2A4\uD2B8 \uAC1D\uCCB4 \uC815\uB9AC'"),
     approved_by: external_exports.string()
@@ -40493,19 +40934,19 @@ function buildServer() {
     id: Id,
     expect: external_exports.object({ title: external_exports.string().optional(), in_trash: external_exports.boolean().optional(), parent_id: external_exports.string().optional(), properties: Any.optional(), content_contains: external_exports.array(external_exports.string()).optional() })
   }, verifyChange);
-  tool("api_request", "Notion REST \uC6D0\uD615 \uD638\uCD9C(GET/POST/PATCH, DELETE\uB294 /blocks/{id} \uBCF8\uBB38 \uBE14\uB85D \uC0AD\uC81C\uB9CC; /v1 \uC81C\uC678 \uACBD\uB85C). \uD398\uC774\uC9C0\xB7DB \uD734\uC9C0\uD1B5 \uCC98\uB9AC\xB7\uC6B4\uC601\uADDC\uCE59 \uC218\uC815\uC740 \uB9C9\uD600 \uC788\uC74C. \uB2E4\uB978 \uB3C4\uAD6C\uB85C \uC548 \uB418\uB294 \uACBD\uC6B0\uC5D0\uB9CC.", {
+  tool("api_request", "Notion REST \uC6D0\uD615 \uD638\uCD9C(/v1 \uC81C\uC678 \uACBD\uB85C). \uC4F0\uAE30\uB294 \uD5C8\uC6A9 \uBAA9\uB85D \uBC29\uC2DD\uC774\uBA70 \uC804\uC6A9 \uB3C4\uAD6C\uC640 \uAC19\uC740 \uC548\uC804 \uAE30\uC900\uC73C\uB85C \uAC80\uC0AC\uD55C\uB2E4(\uD734\uC9C0\uD1B5\xB7\uBCF4\uD638 \uAC1D\uCCB4 \uC774\uB3D9\xB7\uBCF4\uD638 DB \uC2A4\uD0A4\uB9C8\xB7\uC6B4\uC601\uADDC\uCE59\xB7\uC791\uC5C5 \uC6D0\uC7A5 \uC0C1\uD0DC \uC6B0\uD68C \uBD88\uAC00). \uB2E4\uB978 \uB3C4\uAD6C\uB85C \uC548 \uB418\uB294 \uACBD\uC6B0\uC5D0\uB9CC.", {
     method: external_exports.enum(["GET", "POST", "PATCH", "DELETE"]),
     path: external_exports.string(),
     body: external_exports.any().optional()
   }, apiRequest);
-  tool("upload_file", "\uB85C\uCEEC \uD30C\uC77C(\uCD5C\uB300 20MB)\uC744 Notion\uC5D0 \uC5C5\uB85C\uB4DC. attach_to(\uD398\uC774\uC9C0 ID)\uB97C \uC8FC\uBA74 \uADF8 \uD398\uC774\uC9C0 \uBCF8\uBB38 \uB05D\uC5D0 image/pdf/file \uBE14\uB85D\uC73C\uB85C \uCCA8\uBD80\uD558\uACE0 \uC7AC\uC870\uD68C \uAC80\uC99D.", {
+  tool("upload_file", "\uD30C\uC77C(\uCD5C\uB300 20MB; \uB85C\uCEEC path \uB610\uB294 content_base64+filename)\uC744 Notion\uC5D0 \uC5C5\uB85C\uB4DC. attach_to(\uD398\uC774\uC9C0 ID)\uB97C \uC8FC\uBA74 \uADF8 \uD398\uC774\uC9C0 \uBCF8\uBB38 \uB05D\uC5D0 image/pdf/file \uBE14\uB85D\uC73C\uB85C \uCCA8\uBD80\uD558\uACE0 \uC7AC\uC870\uD68C \uAC80\uC99D.", {
     path: external_exports.string().optional().describe("\uB85C\uCEEC \uD30C\uC77C \uACBD\uB85C(\uC774 PC\uC5D0\uC11C \uC2E4\uD589\uD560 \uB54C)"),
     content_base64: external_exports.string().optional().describe("\uC6D0\uACA9 \uC2E4\uD589 \uC2DC \uD30C\uC77C \uB0B4\uC6A9(base64)"),
     filename: external_exports.string().optional(),
     attach_to: external_exports.string().optional(),
     caption: external_exports.string().optional()
   }, uploadFile);
-  tool("task_search", "\uC791\uC5C5 \uC6D0\uC7A5 \uAC80\uC0C9. \uAE30\uBCF8\uC740 \uBBF8\uC644\uB8CC \uC804\uCCB4(\uC644\uB8CC \uC81C\uC678). include_done_days=7\uC774\uBA74 \uCD5C\uADFC 7\uC77C \uC644\uB8CC \uD3EC\uD568.", {
+  tool("task_search", "\uC791\uC5C5 \uC6D0\uC7A5 \uAC80\uC0C9. \uAE30\uBCF8\uC740 \uBBF8\uC644\uB8CC \uC804\uCCB4. include_done_days=7\uC774\uBA74 \uCD5C\uADFC 7\uC77C \uC644\uB8CC \uD3EC\uD568.", {
     query: external_exports.string().optional(),
     status: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
     include_done_days: external_exports.number().optional(),
@@ -40514,37 +40955,39 @@ function buildServer() {
     limit: external_exports.number().optional()
   }, taskSearch);
   tool("task_get", "\uC791\uC5C5 \uC0C1\uC138(\uC791\uC5C5\uB0B4\uC6A9\xB7\uACB0\uC815\uC0AC\uD56D\xB7\uAD00\uB828\uD30C\uC77C\xB7\uCEE4\uBC0B\xB7\uAC1C\uC785 \uB4F1 \uC778\uC218\uC778\uACC4 \uAE30\uB85D \uC804\uCCB4).", { id: Id }, taskGet);
-  tool("task_create", "\uC0C8 \uC791\uC5C5 \uB4F1\uB85D. \uBA3C\uC800 \uAE30\uC874 \uC791\uC5C5(\uBBF8\uC644\uB8CC+\uCD5C\uADFC7\uC77C \uC644\uB8CC)\uC744 \uC790\uB3D9 \uAC80\uC0C9\uD574 \uC720\uC0AC \uD6C4\uBCF4\uAC00 \uC788\uC73C\uBA74 \uC0DD\uC131\uD558\uC9C0 \uC54A\uACE0 \uD6C4\uBCF4\uB97C \uB3CC\uB824\uC900\uB2E4(\uAC15\uC81C \uC0DD\uC131 \uC5C6\uC74C). \uC791\uC5C5\uBA85\uC5D0 [\uD504\uB85C\uC81D\uD2B8\uBA85] \uC790\uB3D9 \uBD80\uCC29, \uD504\uB85C\uC81D\uD2B8 \uAD00\uACC4 \uC790\uB3D9 \uC5F0\uACB0, \uC6B0\uC120\uC21C\uC704\uB294 \uC0C1/\uC911/\uD558\uB9CC.", {
+  tool("task_create", "\uC0C8 \uC791\uC5C5 \uB4F1\uB85D. \uAE30\uC874 \uC720\uC0AC \uC791\uC5C5\uC744 \uBA3C\uC800 \uC790\uB3D9 \uAC80\uC0C9\uD574 \uD6C4\uBCF4\uAC00 \uC788\uC73C\uBA74 \uB9CC\uB4E4\uC9C0 \uC54A\uB294\uB2E4(\uAC15\uC81C \uC0DD\uC131 \uC5C6\uC74C). \uD504\uB85C\uC81D\uD2B8\uB294 \uD504\uB85C\uC81D\uD2B8 \uC6D0\uC7A5\uC5D0 \uC774\uB984\uC774 \uC815\uD655\uD788 \uAC19\uC740 \uAC83\uC774 \uC788\uC5B4\uC57C \uD558\uBA70 \uC5C6\uC73C\uBA74 \uB9CC\uB4E4\uC9C0 \uC54A\uB294\uB2E4. \uB2F4\uB2F9\uC790\uB294 \uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 relation, \uC785\uB825\uC790\uB294 \uC2E4\uC81C \uD638\uCD9C\uC790\uB85C \uAE30\uB85D. \uC0C1\uD0DC\xB7\uC6B0\uC120\uC21C\uC704\xB7\uC791\uC5C5\uBA85 \uADDC\uCE59\uC740 policy_get \uCC38\uACE0.", {
     project: external_exports.string(),
     title: external_exports.string(),
     content: external_exports.string(),
-    status: external_exports.enum(["\uBBF8\uCC29\uC218", "\uC9C4\uD589\uC911", "\uACC4\uD68D\xB7\uC544\uC774\uB514\uC5B4"]).optional(),
-    priority: external_exports.enum(["\uC0C1", "\uC911", "\uD558"]).optional(),
-    worker: external_exports.string().optional(),
+    status: external_exports.string().optional(),
+    priority: external_exports.string().optional(),
+    dad_instruction: DadInstruction,
+    worker: external_exports.string().optional().describe("\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC774\uB984(\uAE30\uBCF8: \uD638\uCD9C\uC790)"),
     requester: external_exports.string().optional(),
     distinct_from: external_exports.object({ ids: external_exports.array(external_exports.string()), reason: external_exports.string() }).optional(),
     extra: Any.optional(),
     test_object: external_exports.boolean().optional()
   }, taskCreate);
-  tool("task_start", "\uC791\uC5C5 \uC2DC\uC791: \uAE30\uC874 \uAE30\uB85D \uD655\uC778(\uBC18\uD658) \u2192 \uC0C1\uD0DC=\uC9C4\uD589\uC911 + \uC2DC\uC791 \uAE30\uB85D \u2192 \uC7AC\uC870\uD68C\uB85C \uC9C4\uD589\uC911 \uBC18\uC601 \uAC80\uC99D. \uC644\uB8CC \uC791\uC5C5\uC740 reopen_completed \uD544\uC694.", {
+  tool("task_start", "\uC791\uC5C5 \uC2DC\uC791: \uAE30\uC874 \uAE30\uB85D \uD655\uC778(\uBC18\uD658) \u2192 \uC9C4\uD589 \uC0C1\uD0DC\uB85C \uBCC0\uACBD + \uC2DC\uC791 \uAE30\uB85D \u2192 \uC7AC\uC870\uD68C \uAC80\uC99D. \uC644\uB8CC \uC791\uC5C5\uC740 reopen_completed \uD544\uC694.", {
     id: Id,
     note: external_exports.string(),
     worker: external_exports.string().optional(),
     reopen_completed: external_exports.boolean().optional()
   }, taskStart);
-  tool("task_update", "\uC9C4\uD589 \uC911 \uAE30\uB85D: progress(\uC791\uC5C5\uB0B4\uC6A9\uC5D0 \uC2DC\uAC01\uACFC \uD568\uAED8 \uB367\uBD99\uC784)\xB7decision\xB7files\xB7commits\xB7note, priority(\uC0C1/\uC911/\uD558), intervention(\uC544\uBE60 \uAC1C\uC785 \uC5C6\uC74C/\uC758\uC0AC\uACB0\uC815/\uC9C1\uC811\uC870\uC791+\uC694\uCCAD\uB0B4\uC6A9). \uC0C1\uD0DC\uB294 \uBC14\uAFB8\uC9C0 \uC54A\uC74C.", {
+  tool("task_update", "\uC9C4\uD589 \uC911 \uAE30\uB85D: progress\xB7decision\xB7files\xB7commits\xB7note, priority(\uC544\uBE60 \uC804\uC6A9 \uAC12\uC740 dad_instruction \uD544\uC694), intervention(\uC544\uBE60 \uAC1C\uC785 \uAC12 + \uC694\uCCAD\uB0B4\uC6A9). \uC0C1\uD0DC\uB294 \uBC14\uAFB8\uC9C0 \uC54A\uC74C.", {
     id: Id,
     progress: external_exports.string().optional(),
     decision: external_exports.string().optional(),
     files: external_exports.string().optional(),
     commits: external_exports.string().optional(),
     note: external_exports.string().optional(),
-    priority: external_exports.enum(["\uC0C1", "\uC911", "\uD558"]).optional(),
+    priority: external_exports.string().optional(),
+    dad_instruction: DadInstruction,
     intervention: Intervention.optional()
   }, taskUpdate);
-  tool("task_finish", "\uC885\uB8CC \uAC8C\uC774\uD2B8: \uD604\uC7AC \uC791\uC5C5 \uC7AC\uC870\uD68C \u2192 \uACB0\uACFC\xB7\uAC80\uC99D\xB7\uBBF8\uD574\uACB0\xB7\uB2E4\uC74C \uB2E8\uACC4 \uAE30\uB85D \u2192 outcome(\uC644\uB8CC/\uC9C4\uD589\uC911/\uB300\uAE30/\uBCF4\uB958)\uC744 \uADDC\uCE59\uB300\uB85C \uAC80\uC0AC(\uC644\uB8CC\uB294 \uAC80\uC99D \uD544\uC218, \uB300\uAE30\uB294 \uC678\uBD80\uC870\uAC74, \uBCF4\uB958\uB294 \uC758\uB3C4\uC801 \uC911\uB2E8) \u2192 \uC6D0\uC7A5 \uC218\uC815 \u2192 \uC7AC\uC870\uD68C\uB85C \uC0C1\uD0DC\xB7\uC644\uB8CC\uC77C\uC2DC\xB7\uAE30\uB85D \uC77C\uCE58 \uAC80\uC99D.", {
+  tool("task_finish", "\uC885\uB8CC \uAC8C\uC774\uD2B8: \uC7AC\uC870\uD68C \u2192 \uACB0\uACFC\xB7\uAC80\uC99D\xB7\uBBF8\uD574\uACB0\xB7\uB2E4\uC74C \uB2E8\uACC4 \uAE30\uB85D \u2192 outcome \uAC80\uC0AC(\uC644\uB8CC\uB294 \uAC80\uC99D \uD544\uC218\xB7\uBBF8\uD574\uACB0 \uC788\uC73C\uBA74 \uAC70\uBD80) \u2192 \uC6D0\uC7A5 \uC218\uC815 \u2192 \uC7AC\uC870\uD68C\uB85C \uC0C1\uD0DC\xB7\uC644\uB8CC\uC77C\uC2DC\xB7\uAE30\uB85D \uC77C\uCE58 \uAC80\uC99D.", {
     id: Id,
-    outcome: external_exports.enum(["\uC644\uB8CC", "\uC9C4\uD589\uC911", "\uB300\uAE30", "\uBCF4\uB958"]),
+    outcome: external_exports.string().describe("\uC791\uC5C5 \uC6D0\uC7A5 \uC0C1\uD0DC \uAC12(policy_get)"),
     result: external_exports.string(),
     verification: external_exports.string().optional(),
     unresolved: external_exports.string().optional(),
@@ -40557,8 +41000,8 @@ function buildServer() {
     dad_confirmed: external_exports.string().optional(),
     intervention: Intervention.optional()
   }, taskFinish);
-  tool("rules_get", "\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C \uC77D\uAE30(Markdown). doc: \uC6B4\uC601\uADDC\uCE59(\uAE30\uBCF8)/\uC2E4\uD589\xB7\uC885\uB8CC/\uC815\uCCB4\uC131/\uAC1C\uBC1C \uC8FC\uC758\uC0AC\uD56D. section\uC73C\uB85C \uC81C\uBAA9 \uC77C\uBD80 \uD544\uD130.", { doc: external_exports.string().optional(), section: external_exports.string().optional() }, rulesGet);
-  tool("rules_update", "\uC6B4\uC601\uADDC\uCE59 \uC218\uC815 \u2014 \uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC9C0\uC2DC\uAC00 \uC788\uC744 \uB54C\uB9CC. dad_instruction\uC5D0 \uC2E4\uC81C \uC9C0\uC2DC \uBB38\uAD6C \uD544\uC218. append_section(Markdown \uCD94\uAC00) \uB610\uB294 replace_text.", {
+  tool("rules_get", "\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C \uC77D\uAE30(Markdown). doc \uC0DD\uB7B5=\uC6B4\uC601\uADDC\uCE59 \uBCF8\uBB38. \uADF8 \uBC16\uC758 \uBB38\uC11C\uB294 \uC6B4\uC601\uADDC\uCE59 \u300C\uACF5\uC6A9 \uADDC\uCE59 \uBB38\uC11C \uBAA9\uB85D\u300D \uD45C\uC758 \uC81C\uBAA9 \uC77C\uBD80\uB098 \uD398\uC774\uC9C0 ID\uB85C \uC9C0\uC815. section\uC73C\uB85C \uC81C\uBAA9 \uC77C\uBD80 \uD544\uD130.", { doc: external_exports.string().optional(), section: external_exports.string().optional() }, rulesGet);
+  tool("rules_update", "\uC6B4\uC601\uADDC\uCE59 \uBB38\uC11C \uC218\uC815 \u2014 \uC544\uBE60\uC758 \uBA85\uC2DC\uC801 \uC9C0\uC2DC\uAC00 \uC788\uC744 \uB54C\uB9CC. dad_instruction\uC5D0 \uC2E4\uC81C \uC9C0\uC2DC \uBB38\uAD6C \uD544\uC218. append_section(Markdown \uCD94\uAC00) \uB610\uB294 replace_text.", {
     doc: external_exports.string().optional(),
     dad_instruction: external_exports.string(),
     mode: external_exports.enum(["append_section", "replace_text"]),
@@ -40566,23 +41009,25 @@ function buildServer() {
     old_text: external_exports.string().optional(),
     new_text: external_exports.string().optional()
   }, rulesUpdate);
-  tool("worklog_get", "\uB0A0\uC9DC\uBCC4 \uC791\uC5C5\uC77C\uC9C0 \uC870\uD68C (date=YYYY-MM-DD, \uAE30\uBCF8 \uC624\uB298 KST).", { date: external_exports.string().optional() }, worklogGet);
-  tool("worklog_write", "\uB0A0\uC9DC\uBCC4 \uC791\uC5C5\uC77C\uC9C0\uC5D0 Markdown \uB367\uBD99\uC774\uAE30. \uC5C6\uC73C\uBA74 create_if_missing=true\uB85C \uC0DD\uC131.", { date: external_exports.string().optional(), markdown: external_exports.string(), create_if_missing: external_exports.boolean().optional(), test_object: external_exports.boolean().optional() }, worklogWrite);
+  tool("worklog_get", "\uB0A0\uC9DC\uBCC4 \uC791\uC5C5\uC77C\uC9C0 \uC870\uD68C (date=YYYY-MM-DD, \uAE30\uBCF8: \uC6B4\uC601\uADDC\uCE59 \uC791\uC5C5\uC77C \uAE30\uC900\uC758 \uC624\uB298).", { date: external_exports.string().optional() }, worklogGet);
+  tool("worklog_write", "\uB0A0\uC9DC\uBCC4 \uC791\uC5C5\uC77C\uC9C0\uC5D0 Markdown \uB367\uBD99\uC774\uAE30(\uAE30\uBCF8 \uB0A0\uC9DC: \uC6B4\uC601\uADDC\uCE59 \uC791\uC5C5\uC77C \uAE30\uC900\uC758 \uC624\uB298). \uC5C6\uC73C\uBA74 create_if_missing=true\uB85C \uC0DD\uC131.", { date: external_exports.string().optional(), markdown: external_exports.string(), create_if_missing: external_exports.boolean().optional(), test_object: external_exports.boolean().optional() }, worklogWrite);
   tool("employee_find", "\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC870\uD68C (id, \uB610\uB294 name/category(=\uAD6C\uBD84)/status(=\uC0C1\uD0DC) \uC870\uAC74).", { id: external_exports.string().optional(), name: external_exports.string().optional(), category: external_exports.string().optional().describe("\uAD6C\uBD84"), status: external_exports.string().optional().describe("\uC0C1\uD0DC") }, (a) => employeeFind({ id: a.id, name: a.name, \uAD6C\uBD84: a.category, \uC0C1\uD0DC: a.status }));
   tool("employee_update", "\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC18D\uC131 \uC218\uC815 \uD6C4 \uC7AC\uC870\uD68C \uAC80\uC99D.", { id: Id, properties: Any }, employeeUpdate);
   return server;
 }
 
 // dist/http.js
-async function handleMcp(req, res, body) {
-  const server = buildServer();
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: void 0, enableJsonResponse: true });
-  res.on("close", () => {
-    transport.close();
-    server.close();
+async function handleMcp(req, res, body, caller = null) {
+  await runWithCaller(caller, "http", async () => {
+    const server = buildServer();
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: void 0, enableJsonResponse: true });
+    res.on("close", () => {
+      transport.close();
+      server.close();
+    });
+    await server.connect(transport);
+    await transport.handleRequest(req, res, body);
   });
-  await server.connect(transport);
-  await transport.handleRequest(req, res, body);
 }
 export {
   handleMcp
