@@ -1,0 +1,2 @@
+# 메모리허브 MCP 원본 소스는 Vercel에 올리지 않는다 (배포에는 api/_lib/memoryhub.bundle.mjs만 쓰임)
+mcp-memoryhub/

@@ -1,0 +1,28 @@
+{
+  "name": "woos-memoryhub-mcp",
+  "version": "1.0.0",
+  "description": "WOO'S 메모리허브 MCP — Notion 워크스페이스 통합 관리 MCP",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "node dist/selftest.js",
+    "bundle": "npx -y esbuild@0.24.0 dist/http.js --bundle --platform=node --format=esm --target=node20 --outfile=../api/_lib/memoryhub.bundle.mjs \"--banner:js=import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\"",
+    "release": "npm run build && npm run bundle"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2"
+  },
+  "bin": {
+    "woos-memoryhub-mcp": "dist/index.js"
+  }
+}

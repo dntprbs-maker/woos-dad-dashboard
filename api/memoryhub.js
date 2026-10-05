@@ -2,8 +2,8 @@
 //
 //   POST /api/memoryhub/<MEMORYHUB_MCP_KEY>   또는  Authorization: Bearer <MEMORYHUB_MCP_KEY>
 //
-// 도구 정의·실행 로직은 woos-memoryhub-mcp 저장소(src/tools.ts)를 번들한 _lib/memoryhub.bundle.mjs를 쓴다.
-// 번들 갱신: woos-memoryhub-mcp에서 npm run build 후 esbuild로 dist/http.js를 다시 번들한다.
+// 도구 정의·실행 로직은 이 저장소의 mcp-memoryhub/src/tools.ts를 번들한 _lib/memoryhub.bundle.mjs를 쓴다.
+// 번들 갱신: mcp-memoryhub 폴더에서 npm run release (빌드 + 이 번들 재생성).
 // 키는 기존 TASKS_API_KEY와 별개이며, 키가 설정되지 않았으면 모든 요청을 거부한다.
 import { timingSafeEqual } from "node:crypto";
 import { handleMcp } from "./_lib/memoryhub.bundle.mjs";
