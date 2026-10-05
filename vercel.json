@@ -3,18 +3,11 @@
     "api/tasks.js": {
       "maxDuration": 10
     },
-    "api/v1/router.js": {
-      "maxDuration": 60
-    },
     "api/memoryhub.js": {
       "maxDuration": 60
     }
   },
   "rewrites": [
-    {
-      "source": "/api/v1/:path*",
-      "destination": "/api/v1/router?path=:path*"
-    },
     {
       "source": "/api/memoryhub/:path*",
       "destination": "/api/memoryhub?mhkey=:path*"

@@ -2,18 +2,20 @@
 
 현재 UI 시안에 Notion `작업·업무협업` DB 읽기 API를 연결한 Vercel 프로젝트입니다.
 
-여기에 더해, 여러 AI가 같은 작업 원장을 공유하기 위한 **공용 작업관리 API**가
-같은 프로젝트 안에 함께 배포됩니다 → [docs/작업관리-API.md](docs/작업관리-API.md)
+같은 배포에 여러 AI가 Notion 워크스페이스를 다루는 MCP가 함께 들어 있습니다.
 
-- `/api/v1` — REST (HTTP+JSON)
 - `/api/memoryhub/<키>` — WOO'S 메모리허브 MCP (원본 `mcp-memoryhub/`)
-- ~~`/api/mcp`, `/api/mcp-v2`~~ — 구형 공용 작업관리 MCP, 2026-10-05 제거
+- `/api/notion-messenger-webhook` — Notion AI 공용 대화방 Webhook
+
+구형 「공용 작업관리」는 2026-10-05 모두 제거됐습니다 — MCP V1(`/api/mcp`)·V2(`/api/mcp-v2`)와
+REST API(`/api/v1`). 과거 명세는 기록용으로 [docs/작업관리-API.md](docs/작업관리-API.md)에 남겨 둡니다.
 
 ## 필요한 Vercel 환경변수
 - `NOTION_TOKEN`: Notion Integration Secret
 - `NOTION_DATABASE_ID`: 기본값이 코드에 포함되어 있어 선택사항
 - `DASHBOARD_PASSWORD`: 대시보드 접속 비밀번호 (**필수**)
-- `NOTION_DATA_SOURCE_ID`, `TASKS_API_KEY`: 공용 작업관리 API `/api/v1`용 (**필수**)
+- `MEMORYHUB_MCP_KEY`, `WOOS_TOKEN_SECRET`: 메모리허브 MCP용 (**필수**)
+- `TASKS_API_KEY`: 제거된 구형 공용 작업관리 API용 — 현재 코드에서 쓰지 않음
 
 > ⚠️ `DASHBOARD_PASSWORD`가 설정돼 있지 않으면 `/api/tasks`는 데이터를 내주지 않고 503을 반환합니다.
 > 설정 누락 시 실데이터가 새어나가지 않도록 일부러 막아두는 동작입니다.

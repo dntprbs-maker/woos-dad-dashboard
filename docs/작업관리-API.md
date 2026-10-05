@@ -1,3 +1,8 @@
+> ⚠️ **기록용 문서 — 이 API는 운영 중이 아닙니다.**
+> 공용 작업관리 REST API(`/api/v1`)는 아빠 지시로 **2026-10-05 제거**됐고, MCP V1(`/api/mcp`)·V2(`/api/mcp-v2`)도
+> 같은 날 제거됐습니다. 아래 주소는 모두 더 이상 응답하지 않습니다.
+> 현재 AI용 Notion 도구는 「WOO'S 메모리허브 MCP」(`/api/memoryhub/<키>`, 원본 `mcp-memoryhub/`)입니다.
+
 # 공용 작업관리 API
 
 Notion 작업 DB를 **여러 AI가 함께 쓰는 하나의 원장**으로 다루기 위한 HTTP API입니다.
@@ -352,7 +357,7 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 두 주소는 더 이상 서비스되지 않는다.
 
 - 현재 AI용 Notion MCP는 같은 배포의 **「WOO'S 메모리허브 MCP」**(`/api/memoryhub/<키>`, 원본 `mcp-memoryhub/`)다.
-- 이 문서의 REST API(`/api/v1`)는 그대로 운영 중이다.
+- 이 문서의 REST API(`/api/v1`)도 같은 날 제거됐다.
 
 ## AI별 연결 방법
 
