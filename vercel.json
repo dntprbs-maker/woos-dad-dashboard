@@ -11,6 +11,9 @@
     },
     "api/mcp-v2.js": {
       "maxDuration": 60
+    },
+    "api/memoryhub.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
@@ -29,14 +32,24 @@
     {
       "source": "/api/mcp-v2/:path*",
       "destination": "/api/mcp-v2?mcpkey=:path*"
+    },
+    {
+      "source": "/api/memoryhub/:path*",
+      "destination": "/api/memoryhub?mhkey=:path*"
     }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     }
   ]
