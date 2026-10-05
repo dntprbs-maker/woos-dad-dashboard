@@ -26,7 +26,7 @@
 //   POST   /api/v1/agent-status           상태 갱신이자 heartbeat (없으면 생성)
 //
 // 특정 AI에 종속되지 않는 순수 HTTP+JSON 인터페이스다.
-// 실제 동작은 _lib/ops.js 에 있고 MCP 서버(api/mcp-server.js)도 같은 것을 쓴다.
+// 실제 동작은 _lib/ops.js 에 있다. (같은 로직을 쓰던 구형 MCP api/mcp-server.js는 2026-10-05 제거)
 
 import {
   authenticate, send, fail, log, newRequestId, readJson, applyCors

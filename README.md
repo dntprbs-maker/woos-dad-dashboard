@@ -6,7 +6,8 @@
 같은 프로젝트 안에 함께 배포됩니다 → [docs/작업관리-API.md](docs/작업관리-API.md)
 
 - `/api/v1` — REST (HTTP+JSON)
-- `/api/mcp` — Remote MCP 서버 (Streamable HTTP). 같은 로직을 도구로 노출합니다
+- `/api/memoryhub/<키>` — WOO'S 메모리허브 MCP (원본 `mcp-memoryhub/`)
+- ~~`/api/mcp`, `/api/mcp-v2`~~ — 구형 공용 작업관리 MCP, 2026-10-05 제거
 
 ## 필요한 Vercel 환경변수
 - `NOTION_TOKEN`: Notion Integration Secret

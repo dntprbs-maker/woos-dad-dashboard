@@ -1,7 +1,7 @@
 // 작업관리 핵심 동작. HTTP도 MCP도 이 모듈만 부른다.
 //
 // 여기 있는 함수는 req/res를 모르고 순수하게 데이터만 주고받는다.
-// REST 라우터(api/v1/router.js)와 MCP 서버(api/mcp-server.js)가 같은 로직을 쓰도록
+// REST 라우터(api/v1/router.js)가 쓰는 로직 (구형 MCP 서버 api/mcp-server.js와 공유하던 것, 그 MCP는 2026-10-05 제거)
 // 한 군데로 모아 둔 것이다. 운영 원칙(생성 전 중복검사, 서버측 필터)도 여기서 강제된다.
 
 import {

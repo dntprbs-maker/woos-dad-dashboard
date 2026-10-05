@@ -1,4 +1,4 @@
-// 로컬에서 /api/v1 과 /api/mcp 함수를 그대로 띄우는 개발용 서버.
+// 로컬에서 /api/v1 함수를 그대로 띄우는 개발용 서버. (구형 /api/mcp는 2026-10-05 제거)
 // Vercel 런타임이 넣어 주는 res.status()/res.json() 만 얇게 흉내 낸다.
 //
 //   node --env-file=.env scripts/dev-server.mjs
@@ -7,7 +7,6 @@
 
 import { createServer } from "node:http";
 import apiHandler from "../api/v1/router.js";
-import mcpHandler from "../api/mcp-server.js";
 
 const PORT = Number(process.env.PORT || 3210);
 
@@ -27,7 +26,6 @@ createServer(async (req, res) => {
 
   const handler =
     path.startsWith("/api/v1") ? apiHandler :
-    (path === "/api/mcp" || path.startsWith("/api/mcp/")) ? mcpHandler :
     null;
 
   if (!handler) {
@@ -43,5 +41,4 @@ createServer(async (req, res) => {
 }).listen(PORT, () => {
   console.log("dev server on http://localhost:" + PORT);
   console.log("  REST : /api/v1");
-  console.log("  MCP  : /api/mcp");
 });

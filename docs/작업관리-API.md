@@ -345,107 +345,19 @@ DB마다 속성 구성이 다르므로, 코드는 실행 시점에 스키마를 
 | `TASKS_API_BASE_URL` | | `openapi.json`의 servers 값 고정용 |
 | `TASKS_API_ALLOWED_ORIGINS` | | 브라우저 직접 호출을 허용할 origin. 기본은 CORS 닫힘 |
 
-## Remote MCP 서버
+## Remote MCP 서버 — 2026-10-05 제거됨
 
-같은 원장을 **MCP 도구**로도 쓸 수 있습니다. REST API와 완전히 같은 코드(`api/_lib/ops.js`)를
-쓰므로 어느 쪽으로 들어와도 중복 차단·서버측 필터 같은 운영 원칙이 똑같이 적용됩니다.
+이 API를 MCP 도구로 노출하던 구형 「공용 작업관리」 MCP(`/api/mcp`, `api/mcp-server.js`)와
+「공용 작업관리 v2」(`/api/mcp-v2`, `api/mcp-v2.js`)는 아빠 승인으로 **2026-10-05 제거**했다.
+두 주소는 더 이상 서비스되지 않는다.
 
-- 엔드포인트: `https://woos-dad-dashboard.vercel.app/api/mcp`
-- 전송 방식: **Streamable HTTP** (JSON-RPC 2.0 over POST). 상태를 들고 있지 않습니다
-- 프로토콜: `2025-06-18` 기본, `2025-03-26`·`2024-11-05` 클라이언트도 받습니다
-- `GET`은 405입니다 — 서버가 먼저 말을 거는 SSE 스트림은 제공하지 않습니다
-
-### 인증 — 두 가지 형태
-
-| 형태 | URL | 쓰는 곳 |
-|---|---|---|
-| 헤더 | `/api/mcp` + `Authorization: Bearer <키>` | 헤더를 설정할 수 있는 클라이언트 (권장) |
-| 경로 | `/api/mcp/<키>` | 헤더를 못 넣는 클라이언트 |
-
-경로 방식은 키가 URL에 들어갑니다. URL은 로그·기록에 남기 쉬우니, **헤더를 넣을 수 있으면
-헤더 쪽을 쓰세요.** 경로 방식을 쓴다면 그 URL 자체가 비밀번호라고 생각하고 다루고,
-새어 나갔다 싶으면 `TASKS_API_KEY`에서 그 라벨만 빼고 재배포하면 즉시 끊깁니다.
-
-### 도구 27개
-
-| 도구 | 하는 일 |
-|---|---|
-| `search_tasks` | 유사 작업 검색 — **새 작업 만들기 전에 반드시 먼저** |
-| `list_tasks` | 조건 조회 (서버측 필터) |
-| `get_task` | 단건 조회 (`blocks=true`면 본문까지) |
-| `create_task` | 생성 — 내부적으로 중복 검사, 걸리면 거절 |
-| `update_task` | 수정 (`appendProgress`, `complete`) |
-| `archive_task` | 보관 (`confirm=true` 필요) |
-| `get_schema` | DB 속성·선택지 조회 |
-| `list_projects` | 프로젝트 원장 목록 |
-| `get_project` | **프로젝트 현황을 한 번에** — 개요·현재상태·주의사항 + 미완료·최근완료 작업 |
-| `update_project` | 프로젝트 현재상태 갱신 |
-| `get_project_schema` | 프로젝트 DB 속성·선택지 조회 |
-| `get_notion_rules` / `update_notion_rules` | 노션 운영규칙 읽기·쓰기 |
-| `check_messages` | **내 미처리 수신함** — 「띵동」 받으면 이걸 먼저 부른다. `me`에 자기 이름 |
-| `list_messages` / `get_message` | 대화방 조건 조회 / 단건 |
-| `send_message` | 메시지 등록 (필수 속성 누락 시 거절) |
-| `update_message` / `mark_messages` | 읽음 처리·수정 / 여러 건 일괄 |
-| `archive_message` | 보관 (`confirm=true` 필요) |
-| `get_messenger_schema` | 대화방 DB 속성·선택지 조회 |
-| `get_agent_status` | AI 하나의 실행상태 — "지금 작업중이야? 마지막 활동 몇 초 전이야?" |
-| `list_agent_status` | 전체 AI 실행상태 목록 |
-| `update_agent_status` | 실행상태 갱신이자 heartbeat |
-| `get_agent_status_schema` | 실행상태 DB 속성·선택지 조회 |
-| `search` / `fetch` | ChatGPT 딥리서치 커넥터가 기대하는 이름의 검색·조회 쌍 |
-
-`initialize` 응답의 `instructions`에 운영 규칙(생성 전 검색, 중복이면 갱신, 거절당하면 force 금지)이
-들어 있어, 클라이언트가 연결하는 순간 모델이 규칙을 함께 읽습니다.
-
-도구 실행이 실패하면 JSON-RPC 오류가 아니라 `isError: true`인 **도구 결과**로 돌려줍니다.
-그래야 모델이 이유를 읽고 스스로 고쳐 다시 시도할 수 있습니다 — 특히 중복 거절일 때
-후보 목록을 그대로 받아 보고 `update_task`로 넘어갈 수 있습니다.
-
-### ChatGPT에 연결하기
-
-1. ChatGPT → **설정 → 커넥터**(Connectors)
-2. **커넥터 추가** / **고급 → 개발자 모드**에서 커스텀 MCP 커넥터 항목을 찾습니다
-3. MCP 서버 URL에 넣습니다:
-   - 커스텀 헤더를 넣을 수 있으면 → `https://woos-dad-dashboard.vercel.app/api/mcp`
-     그리고 `Authorization: Bearer <chatgpt 라벨 키>`
-   - 헤더 칸이 없으면 → `https://woos-dad-dashboard.vercel.app/api/mcp/<chatgpt 라벨 키>`
-     인증은 **없음(None)** 으로 둡니다
-4. 도구 목록에 위 27개가 뜨면 연결된 것입니다
-
-> ChatGPT의 커넥터 화면은 플랜과 버전에 따라 위치와 항목 이름이 달라집니다.
-> 인증 방식으로 OAuth만 제공하고 커스텀 헤더 칸이 없는 경우가 있어, 그래서 경로에 키를 넣는
-> 형태를 함께 열어 뒀습니다. 두 가지 다 서버에서는 똑같이 동작합니다.
-
-초롱이 지시문에 넣어 두면 좋은 문장:
-
-> 작업을 새로 만들기 전에 반드시 `search_tasks`를 먼저 호출한다.
-> 비슷한 작업이 있으면 `create_task` 대신 `update_task`로 기존 작업을 갱신한다.
-> `create_task`가 `duplicate_candidates`로 거절하면 `force`로 재시도하지 말고 후보를 사람에게 보여준다.
-
-### 다른 MCP 클라이언트
-
-Claude Desktop·Claude Code 등 헤더를 설정할 수 있는 클라이언트는 헤더 방식을 씁니다.
-
-```bash
-claude mcp add --transport http woos-tasks https://woos-dad-dashboard.vercel.app/api/mcp --header "Authorization: Bearer <키>"
-```
-
-붙기 전에 확인하려면:
-
-```bash
-npx @modelcontextprotocol/inspector
-```
-
-### 검증
-
-```bash
-BASE=https://woos-dad-dashboard.vercel.app node --env-file=.env scripts/verify-mcp.mjs
-```
+- 현재 AI용 Notion MCP는 같은 배포의 **「WOO'S 메모리허브 MCP」**(`/api/memoryhub/<키>`, 원본 `mcp-memoryhub/`)다.
+- 이 문서의 REST API(`/api/v1`)는 그대로 운영 중이다.
 
 ## AI별 연결 방법
 
-> 초롱이는 **MCP 커넥터**(위 절)와 **Custom GPT Actions**(아래) 중 하나만 쓰면 됩니다.
-> 대화 중에 바로 도구로 부르게 하려면 MCP 쪽이 편하고, 특정 GPT에 고정하려면 Actions 쪽입니다.
+> 구형 MCP 커넥터는 2026-10-05 제거됐다. 초롱이의 Notion 작업은 메모리허브 MCP를 쓴다.
+> 아래 Custom GPT Actions는 REST(`/api/v1`) 연결 방법 기록이다.
 
 ### ChatGPT (초롱이) — Custom GPT Actions
 1. GPT 편집 → **Actions** → **Import from URL**에
