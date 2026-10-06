@@ -1,6 +1,6 @@
 // 운영정책 로더 — 바뀔 수 있는 업무정책은 코드에 박지 않고 Notion 원본(SSoT)에서 읽는다.
 //
-//   작업 원장 DB 스키마      → 상태·우선순위·아빠 개입·작업자/입력자 선택지
+//   작업 원장 DB 스키마      → 상태·우선순위·아빠 개입·입력자/의뢰자 선택지(담당자는 직원·에이전트 relation만 사용)
 //   「woo's 메모리허브 운영규칙」 → 공용 규칙 문서 목록(표), 아빠 전용 우선순위, 작업명 [프로젝트명] 규칙
 //   「초롱이 세팅」           → 작업일 기준 시각(예: 09:00~다음 날 08:59)
 //   「👥 직원·에이전트」 DB   → 실제 작업자 이름(담당자 relation 대상)
@@ -32,7 +32,6 @@ export interface Policy {
   priorities: string[];
   dadOnlyPriorities: string[];
   interventions: string[];
-  workerOptions: string[];
   inputterOptions: string[];
   requesterOptions: string[];
   ruleDocs: { title: string; id: string; targets: string }[];
@@ -44,6 +43,8 @@ export interface Policy {
 }
 
 let cache: { at: number; p: Policy } | null = null;
+/** 이미 로드된 정책(없으면 null) — 동기 코드에서 직원 id→이름 변환용 */
+export const peekPolicy = (): Policy | null => cache?.p ?? null;
 let inflight: Promise<Policy> | null = null;
 const TTL = Number(process.env.WOOS_POLICY_TTL_SEC || 300) * 1000;
 
@@ -109,7 +110,7 @@ async function load(): Promise<Policy> {
 
   return {
     loaded_at: new Date().toISOString(), statuses, priorities, dadOnlyPriorities: dadOnly, interventions,
-    workerOptions: opts(P[PROPS.worker]), inputterOptions: opts(P[PROPS.inputter]), requesterOptions: opts(P[PROPS.requester]),
+    inputterOptions: opts(P[PROPS.inputter]), requesterOptions: opts(P[PROPS.requester]),
     ruleDocs, workdayStart, projectPrefix, employees, sources, fallbacks,
   };
 }
@@ -118,7 +119,7 @@ async function load(): Promise<Policy> {
 const env = (k: string, d: string) => process.env[k] || d;
 export const PROPS = {
   title: env("WOOS_PROP_TITLE", "작업명"), status: env("WOOS_PROP_STATUS", "상태"), priority: env("WOOS_PROP_PRIORITY", "우선순위"),
-  worker: env("WOOS_PROP_WORKER", "작업자"), assignee: env("WOOS_PROP_ASSIGNEE", "담당자"), inputter: env("WOOS_PROP_INPUTTER", "입력자"),
+  assignee: env("WOOS_PROP_ASSIGNEE", "담당자"), inputter: env("WOOS_PROP_INPUTTER", "입력자"),
   requester: env("WOOS_PROP_REQUESTER", "의뢰자"), projectName: env("WOOS_PROP_PROJECT_NAME", "프로젝트명"), project: env("WOOS_PROP_PROJECT", "프로젝트"),
   workday: env("WOOS_PROP_WORKDAY", "작업일"), doneAt: env("WOOS_PROP_DONE_AT", "완료일시"), intervention: env("WOOS_PROP_INTERVENTION", "아빠 개입"),
   interventionReq: env("WOOS_PROP_INTERVENTION_REQ", "개입 요청 내용"), needsCheck: env("WOOS_PROP_NEEDS_CHECK", "확인필요"),
@@ -173,6 +174,6 @@ export async function policySummary(force = false) {
     ai_priorities: p.priorities.filter((x) => !p.dadOnlyPriorities.includes(x)), interventions: p.interventions,
     workday_start: `${pad(p.workdayStart.h)}:${pad(p.workdayStart.m)} (KST)`, project_prefix_rule: p.projectPrefix,
     rule_docs: p.ruleDocs, employees: p.employees.map((e) => ({ name: e.name, display: e.display, 구분: e.kind, 상태: e.status })),
-    select_options: { 작업자: p.workerOptions, 입력자: p.inputterOptions, 의뢰자: p.requesterOptions },
+    select_options: { 입력자: p.inputterOptions, 의뢰자: p.requesterOptions },
   };
 }

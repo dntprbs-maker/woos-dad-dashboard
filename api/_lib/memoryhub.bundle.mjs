@@ -39379,6 +39379,7 @@ var STATUS_NAMES = {
 };
 var INTERVENTION_NONE = process.env.WOOS_INTERVENTION_NONE || "\uC5C6\uC74C";
 var cache = null;
+var peekPolicy = () => cache?.p ?? null;
 var inflight = null;
 var TTL = Number(process.env.WOOS_POLICY_TTL_SEC || 300) * 1e3;
 async function getPolicy(force = false) {
@@ -39455,7 +39456,6 @@ async function load() {
     priorities,
     dadOnlyPriorities: dadOnly,
     interventions,
-    workerOptions: opts(P[PROPS.worker]),
     inputterOptions: opts(P[PROPS.inputter]),
     requesterOptions: opts(P[PROPS.requester]),
     ruleDocs,
@@ -39471,7 +39471,6 @@ var PROPS = {
   title: env2("WOOS_PROP_TITLE", "\uC791\uC5C5\uBA85"),
   status: env2("WOOS_PROP_STATUS", "\uC0C1\uD0DC"),
   priority: env2("WOOS_PROP_PRIORITY", "\uC6B0\uC120\uC21C\uC704"),
-  worker: env2("WOOS_PROP_WORKER", "\uC791\uC5C5\uC790"),
   assignee: env2("WOOS_PROP_ASSIGNEE", "\uB2F4\uB2F9\uC790"),
   inputter: env2("WOOS_PROP_INPUTTER", "\uC785\uB825\uC790"),
   requester: env2("WOOS_PROP_REQUESTER", "\uC758\uB8B0\uC790"),
@@ -39546,7 +39545,7 @@ async function policySummary(force = false) {
     project_prefix_rule: p.projectPrefix,
     rule_docs: p.ruleDocs,
     employees: p.employees.map((e) => ({ name: e.name, display: e.display, \uAD6C\uBD84: e.kind, \uC0C1\uD0DC: e.status })),
-    select_options: { \uC791\uC5C5\uC790: p.workerOptions, \uC785\uB825\uC790: p.inputterOptions, \uC758\uB8B0\uC790: p.requesterOptions }
+    select_options: { \uC785\uB825\uC790: p.inputterOptions, \uC758\uB8B0\uC790: p.requesterOptions }
   };
 }
 
@@ -40379,21 +40378,28 @@ async function schema() {
   return taskSchema;
 }
 async function readTask(id) {
+  await getPolicy();
   const p = await api("GET", `/pages/${normId(id)}`);
   if (!p.parent?.data_source_id || normId(p.parent.data_source_id) !== normId(IDS.taskDs))
     throw new Error("\uC791\uC5C5 \uC6D0\uC7A5\uC758 \uC791\uC5C5\uC774 \uC544\uB2D9\uB2C8\uB2E4.");
   return { page: p, props: await simplifyProps(p) };
 }
+function assigneeNames(props) {
+  const emps = peekPolicy()?.employees || [];
+  return (props[PROPS.assignee] || []).map((id) => emps.find((e) => e.id === normId(id))?.display ?? id);
+}
 function summarize(p, props, full = false) {
   const \uC791\uC5C5\uB0B4\uC6A9 = props[PROPS.content] || "";
+  const \uB2F4\uB2F9\uC790 = assigneeNames(props);
   return {
+    // 작업자: 외부 호환용 이름 — 값은 구형 select가 아니라 담당자 relation에서 파생(첫 담당자)
     id: p.id,
     url: p.url,
     \uC791\uC5C5\uBA85: props[PROPS.title],
     \uC0C1\uD0DC: props[PROPS.status],
     \uC6B0\uC120\uC21C\uC704: props[PROPS.priority],
-    \uC791\uC5C5\uC790: props[PROPS.worker],
-    \uB2F4\uB2F9\uC790: props[PROPS.assignee],
+    \uC791\uC5C5\uC790: \uB2F4\uB2F9\uC790[0] ?? null,
+    \uB2F4\uB2F9\uC790,
     \uC785\uB825\uC790: props[PROPS.inputter],
     \uD504\uB85C\uC81D\uD2B8\uBA85: props[PROPS.projectName],
     \uC791\uC5C5\uC77C: props[PROPS.workday],
@@ -40437,13 +40443,18 @@ async function checkIntervention(iv) {
     throw new Error("\uC544\uBE60 \uAC1C\uC785\uC774 \uD544\uC694\uD558\uBA74 request(\uC544\uBE60\uAC00 \uBB34\uC5C7\uC744 \uACB0\uC815\uD558\uAC70\uB098 \uC9C1\uC811 \uD574\uC57C \uD558\uB294\uC9C0)\uB97C \uAD6C\uCCB4\uC801\uC73C\uB85C \uC801\uC5B4\uC57C \uD569\uB2C8\uB2E4.");
 }
 async function taskSearch(a) {
+  await getPolicy();
   const common = [];
   if (a.query)
     common.push({ property: PROPS.title, title: { contains: a.query } });
   if (a.project)
     common.push({ property: PROPS.projectName, rich_text: { contains: a.project } });
-  if (a.worker)
-    common.push({ property: PROPS.worker, select: { equals: a.worker } });
+  if (a.worker) {
+    const emp = await findEmployee(a.worker);
+    if (!emp)
+      throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${a.worker}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
+    common.push({ property: PROPS.assignee, relation: { contains: emp.id } });
+  }
   const branches = [];
   const st = a.status ? Array.isArray(a.status) ? a.status : [a.status] : null;
   if (st)
@@ -40531,10 +40542,6 @@ async function taskCreate(a) {
     vals[PROPS.assignee] = [emp.id];
   else
     notes.push(`'${PROPS.assignee}' relation \uC18D\uC131\uC774 \uC5C6\uC5B4 \uB2F4\uB2F9\uC790\uB97C relation\uC73C\uB85C \uB0A8\uAE30\uC9C0 \uBABB\uD568`);
-  if (p.workerOptions.includes(emp.display))
-    vals[PROPS.worker] = emp.display;
-  else
-    notes.push(`\uC791\uC5C5\uC790(select) \uC120\uD0DD\uC9C0\uC5D0 '${emp.display}'\uAC00 \uC5C6\uC5B4 \uBE44\uC6CC \uB460 \u2014 \uB2F4\uB2F9\uC790 relation\uC774 \uC815\uD655\uD55C \uAE30\uB85D`);
   if (!caller)
     notes.push("\uD638\uCD9C\uC790\uB97C \uD655\uC778\uD560 \uC218 \uC5C6\uC5B4 \uC785\uB825\uC790\uB97C \uBE44\uC6CC \uB460(\uCD94\uC815\uD558\uC9C0 \uC54A\uC74C)");
   else if (p.inputterOptions.includes(caller))
@@ -40579,11 +40586,10 @@ async function taskStart(a) {
     const emp = await findEmployee(a.worker);
     if (!emp)
       throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${a.worker}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`);
-    const p = await getPolicy();
     if (page.properties[PROPS.assignee])
       body.properties[PROPS.assignee] = { relation: [{ id: emp.id }] };
-    if (p.workerOptions.includes(emp.display))
-      body.properties[PROPS.worker] = { select: { name: emp.display } };
+    else
+      throw new Error(`'${PROPS.assignee}' relation \uC18D\uC131\uC774 \uC5C6\uC5B4 \uB2F4\uB2F9\uC790\uB97C \uBC14\uAFC0 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
   }
   await api("PATCH", `/pages/${page.id}`, body);
   audit({ tool: "task_start", id: page.id, from: props[PROPS.status], caller: currentCaller() });

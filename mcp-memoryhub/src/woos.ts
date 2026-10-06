@@ -5,7 +5,7 @@ import { api, paginate, normId } from "./notion.js";
 import { titleOf, simplifyProps, buildProps, rt, mdToBlocks, appendBlocks, blocksToMd, plain } from "./format.js";
 import { IDS, audit, resolve, markCreated } from "./core.js";
 import { writeContent, query, sameVal } from "./generic.js";
-import { getPolicy, PROPS, STATUS_NAMES, INTERVENTION_NONE, currentWorkday, displayName } from "./policy.js";
+import { getPolicy, peekPolicy, PROPS, STATUS_NAMES, INTERVENTION_NONE, currentWorkday, displayName } from "./policy.js";
 import { ruleDocIds, TEST_PREFIX } from "./safety.js";
 import { currentCaller } from "./context.js";
 
@@ -24,16 +24,25 @@ async function schema() {
 }
 
 async function readTask(id: string) {
+  await getPolicy(); // summarize가 담당자 relation id → 이름 변환에 쓰는 직원 목록
   const p = await api("GET", `/pages/${normId(id)}`);
   if (!p.parent?.data_source_id || normId(p.parent.data_source_id) !== normId(IDS.taskDs)) throw new Error("작업 원장의 작업이 아닙니다.");
   return { page: p, props: await simplifyProps(p) };
 }
 
+/** 담당자 relation(직원·에이전트 id 배열) → 표시 이름 배열. 정책 미로드/미등록 id는 id 그대로 */
+function assigneeNames(props: any): string[] {
+  const emps = peekPolicy()?.employees || [];
+  return ((props[PROPS.assignee] || []) as string[]).map((id) => emps.find((e) => e.id === normId(id))?.display ?? id);
+}
+
 function summarize(p: any, props: any, full = false): any {
   const 작업내용: string = props[PROPS.content] || "";
+  const 담당자 = assigneeNames(props);
   return {
-    id: p.id, url: p.url, 작업명: props[PROPS.title], 상태: props[PROPS.status], 우선순위: props[PROPS.priority], 작업자: props[PROPS.worker],
-    담당자: props[PROPS.assignee], 입력자: props[PROPS.inputter],
+    // 작업자: 외부 호환용 이름 — 값은 구형 select가 아니라 담당자 relation에서 파생(첫 담당자)
+    id: p.id, url: p.url, 작업명: props[PROPS.title], 상태: props[PROPS.status], 우선순위: props[PROPS.priority], 작업자: 담당자[0] ?? null,
+    담당자, 입력자: props[PROPS.inputter],
     프로젝트명: props[PROPS.projectName], 작업일: props[PROPS.workday], 완료일시: props[PROPS.doneAt], 아빠개입: props[PROPS.intervention],
     개입요청내용: props[PROPS.interventionReq], 확인필요: props[PROPS.needsCheck], in_trash: p.in_trash,
     ...(full
@@ -79,10 +88,16 @@ async function checkIntervention(iv?: { type: string; request?: string }) {
 // ───────── 조회 ─────────
 export async function taskSearch(a: { query?: string; status?: string | string[]; include_done_days?: number; project?: string; worker?: string; limit?: number }) {
   // Notion 복합필터 중첩 한도(2단계)에 맞춰 "공통조건 AND 상태조건"을 분기마다 펼쳐서 OR로 묶는다
+  await getPolicy();
   const common: any[] = [];
   if (a.query) common.push({ property: PROPS.title, title: { contains: a.query } });
   if (a.project) common.push({ property: PROPS.projectName, rich_text: { contains: a.project } });
-  if (a.worker) common.push({ property: PROPS.worker, select: { equals: a.worker } });
+  if (a.worker) {
+    // 외부 인자는 사람·AI 이름 그대로, 내부에서 직원·에이전트 relation id로 바꿔 「담당자」 relation으로 검색
+    const emp = await findEmployee(a.worker);
+    if (!emp) throw new Error(`직원·에이전트 DB에서 '${a.worker}'를 정확히 하나로 찾지 못했습니다. 정확한 이름: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
+    common.push({ property: PROPS.assignee, relation: { contains: emp.id } });
+  }
   const branches: any[][] = [];
   const st = a.status ? (Array.isArray(a.status) ? a.status : [a.status]) : null;
   if (st) for (const s of st) branches.push([{ property: PROPS.status, select: { equals: s } }]);
@@ -175,8 +190,6 @@ export async function taskCreate(a: {
   const vals: any = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.workday]: await currentWorkday(), [PROPS.project]: [proj.id] };
   if (priority) vals[PROPS.priority] = priority;
   if (s[PROPS.assignee]) vals[PROPS.assignee] = [emp.id]; else notes.push(`'${PROPS.assignee}' relation 속성이 없어 담당자를 relation으로 남기지 못함`);
-  if (p.workerOptions.includes(emp.display)) vals[PROPS.worker] = emp.display;
-  else notes.push(`작업자(select) 선택지에 '${emp.display}'가 없어 비워 둠 — 담당자 relation이 정확한 기록`);
   if (!caller) notes.push("호출자를 확인할 수 없어 입력자를 비워 둠(추정하지 않음)");
   else if (p.inputterOptions.includes(caller)) vals[PROPS.inputter] = caller;
   else notes.push(`입력자(select) 선택지에 '${caller}'가 없어 비워 둠 — 작업내용 기록 머리표에 호출자 표시`);
@@ -206,9 +219,8 @@ export async function taskStart(a: { id: string; note: string; worker?: string; 
   if (a.worker) {
     const emp = await findEmployee(a.worker);
     if (!emp) throw new Error(`직원·에이전트 DB에서 '${a.worker}'를 정확히 하나로 찾지 못했습니다.`);
-    const p = await getPolicy();
     if (page.properties[PROPS.assignee]) body.properties[PROPS.assignee] = { relation: [{ id: emp.id }] };
-    if (p.workerOptions.includes(emp.display)) body.properties[PROPS.worker] = { select: { name: emp.display } };
+    else throw new Error(`'${PROPS.assignee}' relation 속성이 없어 담당자를 바꿀 수 없습니다.`);
   }
   await api("PATCH", `/pages/${page.id}`, body);
   audit({ tool: "task_start", id: page.id, from: props[PROPS.status], caller: currentCaller() });
