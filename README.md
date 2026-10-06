@@ -1,3 +1,5 @@
+> ⚠️ 2026-10-07: 구형 대시보드(index.html)와 `/api/tasks`·`/api/check-task`·`/api/widget-summary`는 Notion 작업 원장 연결이 해제되었습니다(410 반환, Notion 호출 없음). 아래 대시보드 설명 중 작업 원장 조회 관련 내용은 과거 기록입니다. 작업 원장은 메모리허브 MCP(`mcp-memoryhub/`)가 사용합니다.
+
 # WOO'S 아빠 대시보드
 
 현재 UI 시안에 Notion `작업·업무협업` DB 읽기 API를 연결한 Vercel 프로젝트입니다.

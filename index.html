@@ -1107,93 +1107,18 @@ function notifyNewNeedsCheck(grouped){
   if("Notification" in window&&Notification.permission==="granted"){try{new Notification("아빠 대시보드",{body:`새 확인필요 작업 ${fresh.length}건이 있습니다`})}catch(e){}}
 }
 async function confirmNeedsCheck(id){
-  const row=[...document.querySelectorAll("[data-check-id]")].find(el=>el.dataset.checkId===id);
-  const btn=row?.querySelector(".needs-check-done");
-  if(btn){btn.disabled=true;btn.textContent="처리 중…"}
-  try{
-    const res=await fetch("/api/check-task",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({id})});
-    const payload=await res.json().catch(()=>({}));
-    if(!res.ok||!payload.ok)throw new Error(payload.error||`API ${res.status}`);
-    await loadLiveNotionData();
-    const t=document.getElementById("toast");if(t){t.textContent="확인 완료 · 목록에서 제거했습니다";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
-  }catch(e){
-    if(btn){btn.disabled=false;btn.textContent="확인 완료"}
-    const t=document.getElementById("toast");if(t){t.textContent="확인 처리에 실패했습니다";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
-    console.error(e)
-  }
+  // 2026-10-07 작업 원장 연결 해제: 더 이상 원장을 수정하지 않는다.
+  const t=document.getElementById("toast");if(t){t.textContent="작업 원장 연결이 해제되어 사용할 수 없습니다";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 }
 
 async function loadLiveNotionData(){
+  // 2026-10-07 작업 원장 연결 해제: /api/tasks를 더 이상 부르지 않는다(작업 원장 조회 0회).
+  // 화면에는 위의 시안(자리 채우기) 데이터만 보인다. 작업 현황은 Notion 작업 원장/메모리허브를 이용한다.
   const badge = document.getElementById("liveDataStatus");
-  try{
-    const res = await fetch("/api/tasks", {cache:"no-store", credentials:"same-origin"});
-    if(res.status === 401){ showPasswordGate(); return; }
-    if(res.status === 503){ showPasswordGate("서버에 DASHBOARD_PASSWORD가 아직 설정되지 않았습니다."); return; }
-    if(!res.ok) throw new Error("API " + res.status);
-    const payload = await res.json();
-    if(!payload.ok || !Array.isArray(payload.tasks)) throw new Error("invalid payload");
-
-    const grouped = {};
-    for(const t of payload.tasks){
-      const p = normalizeProjectName(t.project);
-      if(!grouped[p]) grouped[p] = {todo:[], done:[]};
-
-      const item = {
-        id: t.id || "",
-        title: t.title || "(제목 없음)",
-        status: t.status || "",
-        priority: t.priority || "",
-        worker: t.worker || "",
-        desc: t.description || "",
-        completedAt: t.completedAt || "",
-        workDate: t.workDate || "",
-        needsCheck: !!t.needsCheck
-      };
-
-      if(t.status === "완료") grouped[p].done.push(item);
-      else grouped[p].todo.push(item);
-    }
-
-    // 완료 항목은 완료일시 → 작업일 → 날짜없음 순으로 최신순
-    for(const p of Object.keys(grouped)){
-      grouped[p].done.sort((a,b)=>{
-        const da = Date.parse(a.completedAt || a.workDate || "") || 0;
-        const db = Date.parse(b.completedAt || b.workDate || "") || 0;
-        return db-da;
-      });
-    }
-
-    // Existing UI expects projectTasks. Replace mock data with live data.
-    for(const key of Object.keys(projectTasks)) delete projectTasks[key];
-    Object.assign(projectTasks, grouped);
-
-    renderNeedsCheck(grouped);
-    openWidgetRequestedTask();
-    notifyNewNeedsCheck(grouped);
-
-    // Rebuild counts on project rows where names match.
-    document.querySelectorAll("#projectMenu .project-row").forEach(row=>{
-      const name = row.dataset.name;
-      const d = grouped[name] || {todo:[],done:[]};
-      const count = row.querySelector(".count");
-      if(count) count.textContent = d.todo.length;
-    });
-
-    hidePasswordGate();
-    badge.textContent = "● Notion 실데이터";
-    badge.style.color = "#15803d";
-    badge.style.background = "rgba(240,253,244,.92)";
-
-    // If currently viewing a project, repaint it with live data.
-    if(currentProject){
-      const row = findProjectRow(currentProject);
-      if(row) renderProject(row);
-    }
-  }catch(err){
-    badge.textContent = "시안 데이터 · Notion 연결 대기";
-    badge.style.color = "#b45309";
-    badge.style.background = "rgba(255,251,235,.94)";
-    console.warn("Notion live data unavailable:", err);
+  if(badge){
+    badge.textContent = "시안 데이터 · 작업 원장 연결 해제됨";
+    badge.style.color = "#64748b";
+    badge.style.background = "rgba(255,255,255,.88)";
   }
 }
 window.addEventListener("DOMContentLoaded", loadLiveNotionData);
