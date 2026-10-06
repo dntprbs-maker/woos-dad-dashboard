@@ -39,6 +39,27 @@ function plain(prop) {
   return "";
 }
 
+// 담당자 = 「담당자」 Relation(👥 직원·에이전트 DB). 구형 「작업자」 select는 읽지 않는다.
+// Relation에는 직원 페이지 ID만 들어 있으므로 페이지 제목에서 이름을 읽고,
+// MCP(displayName)와 같은 규칙으로 "01.아빠"→"아빠", "반짝이 (Gemini)"→"반짝이"로 정리한다.
+const NAME_TTL_MS = 10 * 60 * 1000;
+const nameCache = new Map(); // id -> { name, at }
+const displayName = n => n.replace(/^\s*\d+\.\s*/, "").replace(/\s*\(.*\)\s*$/, "").trim();
+
+async function employeeName(token, id) {
+  const hit = nameCache.get(id);
+  if (hit && Date.now() - hit.at < NAME_TTL_MS) return hit.name;
+  const r = await fetch(`https://api.notion.com/v1/pages/${id}`, {
+    headers: { "Authorization": `Bearer ${token}`, "Notion-Version": "2022-06-28" }
+  });
+  if (!r.ok) throw new Error(`Notion ${r.status} (직원 페이지 ${id})`);
+  const page = await r.json();
+  const title = Object.values(page.properties || {}).find(x => x.type === "title");
+  const name = displayName(plain(title)) || id;
+  nameCache.set(id, { name, at: Date.now() });
+  return name;
+}
+
 async function notionQuery(token, start_cursor) {
   const body = { page_size: 100 };
   if (start_cursor) body.start_cursor = start_cursor;
@@ -85,6 +106,11 @@ export default async function handler(req, res) {
       cursor = data.has_more ? data.next_cursor : undefined;
     } while (cursor);
 
+    // 담당자 Relation의 직원 ID → 이름 (중복 제거 후 병렬 조회, 실패하면 오류로 처리 — 말없이 비우지 않는다)
+    const ids = [...new Set(pages.flatMap(pg => (pg.properties?.["담당자"]?.relation || []).map(x => x.id)))];
+    const names = new Map(await Promise.all(ids.map(async id => [id, await employeeName(token, id)])));
+    const workerOf = pg => (pg.properties?.["담당자"]?.relation || []).map(x => names.get(x.id)).filter(Boolean).join(", ");
+
     const tasks = pages.map(page => {
       const p = page.properties || {};
       return {
@@ -93,9 +119,9 @@ export default async function handler(req, res) {
         description: plain(p["작업내용"]),
         status: plain(p["상태"]),
         priority: plain(p["우선순위"]),
-        // 2026-08-30에 DB 속성이 `수행자` → `작업자`로 바뀌었다.
-        // 이름이 바뀌기 전 DB에서도 열리도록 둘 다 본다.
-        worker: plain(p["작업자"]) || plain(p["수행자"]),
+        // 외부 응답의 이름은 worker로 유지(대시보드 호환). 값의 원본은 「담당자」 Relation이며,
+        // 여러 명이면 ", "로 이어 붙이고 없으면 "". 구형 「작업자」 select는 읽지 않는다.
+        worker: workerOf(page),
         project: plain(p["프로젝트명"]),
         needsCheck: !!plain(p["확인필요"]),
         completedAt: plain(p["완료일시"]),

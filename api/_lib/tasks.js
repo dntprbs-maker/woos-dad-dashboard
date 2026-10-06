@@ -12,9 +12,9 @@ const FIELD_ALIASES = {
   status:       ["상태"],
   priority:     ["우선순위"],
   project:      ["프로젝트명"],
-  // DB 표준 명칭은 `작업자`. 예전 이름 `수행자`는 이름이 바뀌기 전 DB를 위해 남겨 둔다.
-  // 앞쪽이 우선이므로 둘 다 있어도 `작업자`가 선택된다.
-  assignee:     ["작업자", "수행자"],
+  // 담당자의 정본은 「담당자」 Relation(직원·에이전트). 구형 `작업자` select는 더 이상 매핑하지 않는다.
+  assignee:     ["담당자"],
+  owners:       ["담당자"],
   requester:    ["의뢰자"],
   enteredBy:    ["입력자"],
   decision:     ["결정사항"],
@@ -26,7 +26,6 @@ const FIELD_ALIASES = {
   duration:     ["작업시간"],
   collabType:   ["협업형태"],
   needsCheck:   ["확인필요"],
-  owners:       ["담당자"],
   participants: ["참여자"],
   projectRef:   ["프로젝트"]
 };
@@ -277,11 +276,18 @@ export function buildFilter(q, map, props) {
     const p = resolve("projectRef", "projectId");
     if (p) and.push({ property: p, relation: { contains: String(q.projectId) } });
   }
-  // `작업자`로도 받아 준다 — DB 속성명 그대로 쓰는 호출자가 있다.
-  const assigneeValue = q.assignee ?? q["작업자"];
+  // 담당자는 Relation이라 이 순수 함수에서는 직원 페이지 ID로만 거른다(이름→ID 변환은 호출한 쪽 몫).
+  // ID가 아닌 값은 말없이 무시하지 않고 ignored에 담는다.
+  const assigneeValue = q.assignee;
   if (assigneeValue) {
     const p = resolve("assignee", "assignee");
-    if (p) and.push(enumClause(p, props[p], assigneeValue));
+    if (p) {
+      const ids = splitList(assigneeValue);
+      if (props[p].type === "relation" && ids.every(v => /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(v))) {
+        const cl = ids.map(id => ({ property: p, relation: { contains: id } }));
+        and.push(cl.length === 1 ? cl[0] : { or: cl });
+      } else ignored.push("assignee(직원 페이지 ID 필요)");
+    }
   }
   if (q.priority) {
     const p = resolve("priority", "priority");
