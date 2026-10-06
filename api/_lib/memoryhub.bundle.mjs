@@ -40392,13 +40392,11 @@ function summarize(p, props, full = false) {
   const \uC791\uC5C5\uB0B4\uC6A9 = props[PROPS.content] || "";
   const \uB2F4\uB2F9\uC790 = assigneeNames(props);
   return {
-    // 작업자: 외부 호환용 이름 — 값은 구형 select가 아니라 담당자 relation에서 파생(첫 담당자)
     id: p.id,
     url: p.url,
     \uC791\uC5C5\uBA85: props[PROPS.title],
     \uC0C1\uD0DC: props[PROPS.status],
     \uC6B0\uC120\uC21C\uC704: props[PROPS.priority],
-    \uC791\uC5C5\uC790: \uB2F4\uB2F9\uC790[0] ?? null,
     \uB2F4\uB2F9\uC790,
     \uC785\uB825\uC790: props[PROPS.inputter],
     \uD504\uB85C\uC81D\uD2B8\uBA85: props[PROPS.projectName],
@@ -40426,6 +40424,12 @@ async function findEmployee(name) {
   return hits.length === 1 ? hits[0] : null;
 }
 var hasDadInstruction = (s) => !!s && s.trim().length >= 8;
+function assigneeArg(a) {
+  const x = a.assignee?.trim(), w = a.worker?.trim();
+  if (x && w && x !== w)
+    throw new Error(`assignee('${x}')\uC640 worker('${w}')\uAC00 \uC11C\uB85C \uB2E4\uB985\uB2C8\uB2E4. worker\uB294 \uC61B \uC774\uB984(alias)\uC774\uBBC0\uB85C assignee\uB9CC \uC4F0\uC138\uC694.`);
+  return x || w || void 0;
+}
 async function checkPriority(value, dadInstruction) {
   const p = await getPolicy();
   if (!p.priorities.includes(value))
@@ -40449,10 +40453,11 @@ async function taskSearch(a) {
     common.push({ property: PROPS.title, title: { contains: a.query } });
   if (a.project)
     common.push({ property: PROPS.projectName, rich_text: { contains: a.project } });
-  if (a.worker) {
-    const emp = await findEmployee(a.worker);
+  const who = assigneeArg(a);
+  if (who) {
+    const emp = await findEmployee(who);
     if (!emp)
-      throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${a.worker}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
+      throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${who}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
     common.push({ property: PROPS.assignee, relation: { contains: emp.id } });
   }
   const branches = [];
@@ -40528,12 +40533,12 @@ async function taskCreate(a) {
     throw new Error("distinct_from.reason\uC5D0 \uC65C \uB2E4\uB978 \uC791\uC5C5\uC778\uC9C0 \uAD6C\uCCB4\uC801\uC73C\uB85C \uC801\uC73C\uC138\uC694.");
   const notes = [];
   const caller = currentCaller();
-  const workerName = (a.worker || caller || "").trim();
-  if (!workerName)
-    throw new Error("\uC791\uC5C5\uC790\uB97C \uC54C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uD638\uCD9C\uC790 \uC815\uBCF4\uAC00 \uC5C6\uC73C\uBA74 worker\uC5D0 \uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC774\uB984\uC744 \uC801\uC73C\uC138\uC694.");
-  const emp = await findEmployee(workerName);
+  const assigneeName = (assigneeArg(a) || caller || "").trim();
+  if (!assigneeName)
+    throw new Error("\uB2F4\uB2F9\uC790\uB97C \uC54C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uD638\uCD9C\uC790 \uC815\uBCF4\uAC00 \uC5C6\uC73C\uBA74 assignee\uC5D0 \uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC774\uB984\uC744 \uC801\uC73C\uC138\uC694.");
+  const emp = await findEmployee(assigneeName);
   if (!emp)
-    throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${workerName}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${p.employees.map((e) => e.display).join(", ")}`);
+    throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${assigneeName}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${p.employees.map((e) => e.display).join(", ")}`);
   const s = await schema();
   const vals = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.workday]: await currentWorkday(), [PROPS.project]: [proj.id] };
   if (priority)
@@ -40567,7 +40572,7 @@ async function taskCreate(a) {
   return {
     created: true,
     project_linked: linked,
-    assignee: emp.name,
+    \uB2F4\uB2F9\uC790: emp.name,
     inputter: vals[PROPS.inputter] ?? null,
     notes,
     verified: re.props[PROPS.title] === title && re.props[PROPS.status] === status && linked && assigned,
@@ -40582,10 +40587,11 @@ async function taskStart(a) {
     throw new Error("\uC774\uBBF8 \uC644\uB8CC\uB41C \uC791\uC5C5\uC785\uB2C8\uB2E4. \uB2E4\uC2DC \uC5F4\uB824\uBA74 reopen_completed=true\uC640 \uC774\uC720(note)\uB97C \uC8FC\uC138\uC694. \uBCC4\uAC1C \uD6C4\uC18D \uC791\uC5C5\uC774\uBA74 task_create\uB85C \uB4F1\uB85D\uD558\uC138\uC694.");
   const before = summarize(page, props, true);
   const body = { properties: { [PROPS.status]: { select: { name: STATUS_NAMES.doing } }, [PROPS.content]: appendRt(page, PROPS.content, `\uC791\uC5C5 \uC2DC\uC791${props[PROPS.status] === STATUS_NAMES.done ? "(\uC7AC\uAC1C)" : ""}: ${a.note}`) } };
-  if (a.worker) {
-    const emp = await findEmployee(a.worker);
+  const who = assigneeArg(a);
+  if (who) {
+    const emp = await findEmployee(who);
     if (!emp)
-      throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${a.worker}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`);
+      throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${who}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`);
     if (page.properties[PROPS.assignee])
       body.properties[PROPS.assignee] = { relation: [{ id: emp.id }] };
     else
@@ -40957,7 +40963,8 @@ function buildServer() {
     status: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
     include_done_days: external_exports.number().optional(),
     project: external_exports.string().optional(),
-    worker: external_exports.string().optional(),
+    assignee: external_exports.string().optional().describe("\uB2F4\uB2F9\uC790(\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC774\uB984) \u2014 \u300C\uB2F4\uB2F9\uC790\u300D relation\uC73C\uB85C \uAC80\uC0C9"),
+    worker: external_exports.string().optional().describe("assignee\uC758 \uC61B \uC774\uB984(\uD638\uD658 alias, \uAC19\uC740 \uB2F4\uB2F9\uC790 relation\uC73C\uB85C \uCC98\uB9AC)"),
     limit: external_exports.number().optional()
   }, taskSearch);
   tool("task_get", "\uC791\uC5C5 \uC0C1\uC138(\uC791\uC5C5\uB0B4\uC6A9\xB7\uACB0\uC815\uC0AC\uD56D\xB7\uAD00\uB828\uD30C\uC77C\xB7\uCEE4\uBC0B\xB7\uAC1C\uC785 \uB4F1 \uC778\uC218\uC778\uACC4 \uAE30\uB85D \uC804\uCCB4).", { id: Id }, taskGet);
@@ -40968,7 +40975,8 @@ function buildServer() {
     status: external_exports.string().optional(),
     priority: external_exports.string().optional(),
     dad_instruction: DadInstruction,
-    worker: external_exports.string().optional().describe("\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC774\uB984(\uAE30\uBCF8: \uD638\uCD9C\uC790)"),
+    assignee: external_exports.string().optional().describe("\uB2F4\uB2F9\uC790 \u2014 \uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 \uC774\uB984(\uAE30\uBCF8: \uD638\uCD9C\uC790)"),
+    worker: external_exports.string().optional().describe("assignee\uC758 \uC61B \uC774\uB984(\uD638\uD658 alias)"),
     requester: external_exports.string().optional(),
     distinct_from: external_exports.object({ ids: external_exports.array(external_exports.string()), reason: external_exports.string() }).optional(),
     extra: Any.optional(),
@@ -40977,7 +40985,8 @@ function buildServer() {
   tool("task_start", "\uC791\uC5C5 \uC2DC\uC791: \uAE30\uC874 \uAE30\uB85D \uD655\uC778(\uBC18\uD658) \u2192 \uC9C4\uD589 \uC0C1\uD0DC\uB85C \uBCC0\uACBD + \uC2DC\uC791 \uAE30\uB85D \u2192 \uC7AC\uC870\uD68C \uAC80\uC99D. \uC644\uB8CC \uC791\uC5C5\uC740 reopen_completed \uD544\uC694.", {
     id: Id,
     note: external_exports.string(),
-    worker: external_exports.string().optional(),
+    assignee: external_exports.string().optional().describe("\uB2F4\uB2F9\uC790\uB97C \uBC14\uAFC0 \uB54C\uB9CC"),
+    worker: external_exports.string().optional().describe("assignee\uC758 \uC61B \uC774\uB984(\uD638\uD658 alias)"),
     reopen_completed: external_exports.boolean().optional()
   }, taskStart);
   tool("task_update", "\uC9C4\uD589 \uC911 \uAE30\uB85D: progress\xB7decision\xB7files\xB7commits\xB7note, priority(\uC544\uBE60 \uC804\uC6A9 \uAC12\uC740 dad_instruction \uD544\uC694), intervention(\uC544\uBE60 \uAC1C\uC785 \uAC12 + \uC694\uCCAD\uB0B4\uC6A9). \uC0C1\uD0DC\uB294 \uBC14\uAFB8\uC9C0 \uC54A\uC74C.", {

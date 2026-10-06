@@ -40,8 +40,7 @@ function summarize(p: any, props: any, full = false): any {
   const 작업내용: string = props[PROPS.content] || "";
   const 담당자 = assigneeNames(props);
   return {
-    // 작업자: 외부 호환용 이름 — 값은 구형 select가 아니라 담당자 relation에서 파생(첫 담당자)
-    id: p.id, url: p.url, 작업명: props[PROPS.title], 상태: props[PROPS.status], 우선순위: props[PROPS.priority], 작업자: 담당자[0] ?? null,
+    id: p.id, url: p.url, 작업명: props[PROPS.title], 상태: props[PROPS.status], 우선순위: props[PROPS.priority],
     담당자, 입력자: props[PROPS.inputter],
     프로젝트명: props[PROPS.projectName], 작업일: props[PROPS.workday], 완료일시: props[PROPS.doneAt], 아빠개입: props[PROPS.intervention],
     개입요청내용: props[PROPS.interventionReq], 확인필요: props[PROPS.needsCheck], in_trash: p.in_trash,
@@ -70,6 +69,13 @@ async function findEmployee(name: string) {
 
 const hasDadInstruction = (s?: string) => !!s && s.trim().length >= 8;
 
+/** 담당자 입력: 공식 인자는 assignee. worker는 옛 호출자 호환용 alias(같은 「담당자」 relation으로 처리, 구형 select와 무관). 둘 다 주면 값이 같아야 한다 */
+function assigneeArg(a: { assignee?: string; worker?: string }): string | undefined {
+  const x = a.assignee?.trim(), w = a.worker?.trim();
+  if (x && w && x !== w) throw new Error(`assignee('${x}')와 worker('${w}')가 서로 다릅니다. worker는 옛 이름(alias)이므로 assignee만 쓰세요.`);
+  return x || w || undefined;
+}
+
 /** 우선순위: DB 선택지에 있어야 하고, 운영규칙상 아빠 전용 값은 아빠 지시 문구가 있어야 한다 */
 async function checkPriority(value: string, dadInstruction?: string) {
   const p = await getPolicy();
@@ -86,16 +92,17 @@ async function checkIntervention(iv?: { type: string; request?: string }) {
 }
 
 // ───────── 조회 ─────────
-export async function taskSearch(a: { query?: string; status?: string | string[]; include_done_days?: number; project?: string; worker?: string; limit?: number }) {
+export async function taskSearch(a: { query?: string; status?: string | string[]; include_done_days?: number; project?: string; assignee?: string; worker?: string; limit?: number }) {
   // Notion 복합필터 중첩 한도(2단계)에 맞춰 "공통조건 AND 상태조건"을 분기마다 펼쳐서 OR로 묶는다
   await getPolicy();
   const common: any[] = [];
   if (a.query) common.push({ property: PROPS.title, title: { contains: a.query } });
   if (a.project) common.push({ property: PROPS.projectName, rich_text: { contains: a.project } });
-  if (a.worker) {
+  const who = assigneeArg(a);
+  if (who) {
     // 외부 인자는 사람·AI 이름 그대로, 내부에서 직원·에이전트 relation id로 바꿔 「담당자」 relation으로 검색
-    const emp = await findEmployee(a.worker);
-    if (!emp) throw new Error(`직원·에이전트 DB에서 '${a.worker}'를 정확히 하나로 찾지 못했습니다. 정확한 이름: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
+    const emp = await findEmployee(who);
+    if (!emp) throw new Error(`직원·에이전트 DB에서 '${who}'를 정확히 하나로 찾지 못했습니다. 정확한 이름: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
     common.push({ property: PROPS.assignee, relation: { contains: emp.id } });
   }
   const branches: any[][] = [];
@@ -137,7 +144,7 @@ const tokens = (s: string) => s.replace(/\[[^\]]*\]/g, " ").split(/[\s,·/()\-�
 
 export async function taskCreate(a: {
   project: string; title: string; content: string; status?: string; priority?: string; dad_instruction?: string;
-  worker?: string; requester?: string; distinct_from?: { ids: string[]; reason: string }; extra?: Record<string, any>; test_object?: boolean;
+  assignee?: string; worker?: string; requester?: string; distinct_from?: { ids: string[]; reason: string }; extra?: Record<string, any>; test_object?: boolean;
 }) {
   const p = await getPolicy();
   const status = a.status || STATUS_NAMES.todo;
@@ -182,10 +189,10 @@ export async function taskCreate(a: {
   // 사람·AI 기록: 입력자 = 실제 호출자(인자로 바꿀 수 없음), 담당자 = 직원·에이전트 relation(정확한 이름)
   const notes: string[] = [];
   const caller = currentCaller();
-  const workerName = (a.worker || caller || "").trim();
-  if (!workerName) throw new Error("작업자를 알 수 없습니다. 호출자 정보가 없으면 worker에 직원·에이전트 이름을 적으세요.");
-  const emp = await findEmployee(workerName);
-  if (!emp) throw new Error(`직원·에이전트 DB에서 '${workerName}'를 정확히 하나로 찾지 못했습니다. 정확한 이름: ${p.employees.map((e) => e.display).join(", ")}`);
+  const assigneeName = (assigneeArg(a) || caller || "").trim();
+  if (!assigneeName) throw new Error("담당자를 알 수 없습니다. 호출자 정보가 없으면 assignee에 직원·에이전트 이름을 적으세요.");
+  const emp = await findEmployee(assigneeName);
+  if (!emp) throw new Error(`직원·에이전트 DB에서 '${assigneeName}'를 정확히 하나로 찾지 못했습니다. 정확한 이름: ${p.employees.map((e) => e.display).join(", ")}`);
   const s = await schema();
   const vals: any = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.workday]: await currentWorkday(), [PROPS.project]: [proj.id] };
   if (priority) vals[PROPS.priority] = priority;
@@ -204,21 +211,22 @@ export async function taskCreate(a: {
   const linked = (re.props[PROPS.project] || []).map(normId).includes(proj.id);
   const assigned = !s[PROPS.assignee] || (re.props[PROPS.assignee] || []).map(normId).includes(emp.id);
   return {
-    created: true, project_linked: linked, assignee: emp.name, inputter: vals[PROPS.inputter] ?? null, notes,
+    created: true, project_linked: linked, 담당자: emp.name, inputter: vals[PROPS.inputter] ?? null, notes,
     verified: re.props[PROPS.title] === title && re.props[PROPS.status] === status && linked && assigned, task: summarize(re.page, re.props),
   };
 }
 
 // ───────── 시작 ─────────
-export async function taskStart(a: { id: string; note: string; worker?: string; reopen_completed?: boolean }) {
+export async function taskStart(a: { id: string; note: string; assignee?: string; worker?: string; reopen_completed?: boolean }) {
   const { page, props } = await readTask(a.id);
   if (page.in_trash) throw new Error("휴지통에 있는 작업입니다.");
   if (props[PROPS.status] === STATUS_NAMES.done && !a.reopen_completed) throw new Error("이미 완료된 작업입니다. 다시 열려면 reopen_completed=true와 이유(note)를 주세요. 별개 후속 작업이면 task_create로 등록하세요.");
   const before = summarize(page, props, true);
   const body: any = { properties: { [PROPS.status]: { select: { name: STATUS_NAMES.doing } }, [PROPS.content]: appendRt(page, PROPS.content, `작업 시작${props[PROPS.status] === STATUS_NAMES.done ? "(재개)" : ""}: ${a.note}`) } };
-  if (a.worker) {
-    const emp = await findEmployee(a.worker);
-    if (!emp) throw new Error(`직원·에이전트 DB에서 '${a.worker}'를 정확히 하나로 찾지 못했습니다.`);
+  const who = assigneeArg(a);
+  if (who) {
+    const emp = await findEmployee(who);
+    if (!emp) throw new Error(`직원·에이전트 DB에서 '${who}'를 정확히 하나로 찾지 못했습니다.`);
     if (page.properties[PROPS.assignee]) body.properties[PROPS.assignee] = { relation: [{ id: emp.id }] };
     else throw new Error(`'${PROPS.assignee}' relation 속성이 없어 담당자를 바꿀 수 없습니다.`);
   }

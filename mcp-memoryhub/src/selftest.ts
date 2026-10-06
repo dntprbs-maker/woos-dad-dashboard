@@ -106,10 +106,10 @@ try {
   rec("10. 조건 검색(속성)·제목 검색·범위 본문 검색", q.data?.count === 1 && q0.data?.count === 0 && !!sch.data?.properties?.["연결"] && s2.data?.results?.some((r: any) => r.id === rootId), { q: q.data?.count, q0: q0.data?.count, s1: s1.data?.count, s2 });
 
   // 작업 원장 절차 (테스트 작업 1건으로)
-  const tc = await call("task_create", { project: "master-project", title: `[테스트] 메모리허브 MCP 실검증용 임시 작업 ${stamp} — 자동 삭제 예정`, content: "MCP 실검증용 임시 작업 (테스트 종료 시 휴지통 처리)", status: "미착수", priority: "하", distinct_from: { ids: [], reason: "실검증용 임시 객체" }, test_object: true });
+  const tc = await call("task_create", { project: "master-project", title: `[테스트] 메모리허브 MCP 실검증용 임시 작업 ${stamp} — 자동 삭제 예정`, content: "MCP 실검증용 임시 작업 (테스트 종료 시 휴지통 처리)", status: "미착수", priority: "하", assignee: "코드디", distinct_from: { ids: [], reason: "실검증용 임시 객체" }, test_object: true });
   let taskId = tc.data?.task?.id;
   if (!taskId && tc.data?.duplicate_candidates) {
-    const tc2 = await call("task_create", { project: "master-project", title: `[테스트] 메모리허브 MCP 실검증용 임시 작업 ${stamp} — 자동 삭제 예정`, content: "MCP 실검증용 임시 작업", status: "미착수", priority: "하", distinct_from: { ids: tc.data.duplicate_candidates.map((c: any) => c.id), reason: "실검증용 임시 객체라 기존 작업과 무관" }, test_object: true });
+    const tc2 = await call("task_create", { project: "master-project", title: `[테스트] 메모리허브 MCP 실검증용 임시 작업 ${stamp} — 자동 삭제 예정`, content: "MCP 실검증용 임시 작업", status: "미착수", priority: "하", assignee: "코드디", distinct_from: { ids: tc.data.duplicate_candidates.map((c: any) => c.id), reason: "실검증용 임시 객체라 기존 작업과 무관" }, test_object: true });
     taskId = tc2.data?.task?.id;
     rec("task_create 중복 후보 감지 후 distinct_from로 등록", !!taskId, { tc, tc2 });
   } else rec("task_create (제목 [프로젝트] 부착·프로젝트 연결)", !!taskId && tc.data.task.작업명.startsWith("[master-project]") && tc.data.project_linked, tc);
@@ -136,6 +136,16 @@ try {
   rec("finish_work: 완료 + 완료일시·재조회 일치", st2.data?.verified && f2.data?.verified === true && f2.data.task.상태 === "완료" && !!f2.data.task.완료일시, f2);
   const ts = await call("task_search", { query: `실검증용 임시 작업 ${stamp}`, include_done_days: 1 });
   rec("task_search(최근 완료 포함)", ts.data?.tasks?.some((t: any) => t.id === taskId), ts);
+  // 담당자 통일: 출력은 「담당자」만(구형 「작업자」 키 없음), 입력은 assignee 공식 + worker alias
+  const t0 = ts.data?.tasks?.find((t: any) => t.id === taskId);
+  rec("담당자 출력: 「담당자」 키 있음·구형 「작업자」 키 없음", Array.isArray(t0?.담당자) && t0.담당자.includes("코드디") && !("작업자" in t0), t0);
+  const sa = await call("task_search", { assignee: "코드디", query: `실검증용 임시 작업 ${stamp}`, include_done_days: 1 });
+  const sw = await call("task_search", { worker: "코드디", query: `실검증용 임시 작업 ${stamp}`, include_done_days: 1 });
+  rec("담당자 검색: assignee·worker(alias) 모두 「담당자」 relation 기준으로 동일 결과", sa.data?.tasks?.some((t: any) => t.id === taskId) && sw.data?.tasks?.some((t: any) => t.id === taskId), { sa, sw });
+  const sx = await call("task_search", { assignee: "코드디", worker: "해리", include_done_days: 1 });
+  rec("assignee·worker 값이 다르면 거부", !!sx.error, sx);
+  const tg = await call("task_get", { id: taskId });
+  rec("task_get: 「담당자」 키만", Array.isArray(tg.data?.task?.담당자 ?? tg.data?.담당자) && !("작업자" in (tg.data?.task ?? tg.data ?? {})), tg);
 
   // 날짜별 작업일지: 실제 일지는 읽기만, 쓰기는 존재하지 않는 날짜(2099-01-01) 시험 일지로
   const wlToday = await call("worklog_get", { date: "2026-10-04" });

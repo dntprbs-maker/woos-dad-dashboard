@@ -89,15 +89,15 @@ tool("upload_file", "파일(최대 20MB; 로컬 path 또는 content_base64+filen
 // ═════════ WOO'S: 작업 원장 ═════════
 tool("task_search", "작업 원장 검색. 기본은 미완료 전체. include_done_days=7이면 최근 7일 완료 포함.", {
   query: z.string().optional(), status: z.union([z.string(), z.array(z.string())]).optional(), include_done_days: z.number().optional(),
-  project: z.string().optional(), worker: z.string().optional(), limit: z.number().optional(),
+  project: z.string().optional(), assignee: z.string().optional().describe("담당자(직원·에이전트 이름) — 「담당자」 relation으로 검색"), worker: z.string().optional().describe("assignee의 옛 이름(호환 alias, 같은 담당자 relation으로 처리)"), limit: z.number().optional(),
 }, W.taskSearch);
 tool("task_get", "작업 상세(작업내용·결정사항·관련파일·커밋·개입 등 인수인계 기록 전체).", { id: Id }, W.taskGet);
 tool("task_create", "새 작업 등록. 기존 유사 작업을 먼저 자동 검색해 후보가 있으면 만들지 않는다(강제 생성 없음). 프로젝트는 프로젝트 원장에 이름이 정확히 같은 것이 있어야 하며 없으면 만들지 않는다. 담당자는 직원·에이전트 relation, 입력자는 실제 호출자로 기록. 상태·우선순위·작업명 규칙은 policy_get 참고.", {
   project: z.string(), title: z.string(), content: z.string(), status: z.string().optional(), priority: z.string().optional(), dad_instruction: DadInstruction,
-  worker: z.string().optional().describe("직원·에이전트 이름(기본: 호출자)"), requester: z.string().optional(), distinct_from: z.object({ ids: z.array(z.string()), reason: z.string() }).optional(), extra: Any.optional(), test_object: z.boolean().optional(),
+  assignee: z.string().optional().describe("담당자 — 직원·에이전트 이름(기본: 호출자)"), worker: z.string().optional().describe("assignee의 옛 이름(호환 alias)"), requester: z.string().optional(), distinct_from: z.object({ ids: z.array(z.string()), reason: z.string() }).optional(), extra: Any.optional(), test_object: z.boolean().optional(),
 }, W.taskCreate);
 tool("task_start", "작업 시작: 기존 기록 확인(반환) → 진행 상태로 변경 + 시작 기록 → 재조회 검증. 완료 작업은 reopen_completed 필요.", {
-  id: Id, note: z.string(), worker: z.string().optional(), reopen_completed: z.boolean().optional(),
+  id: Id, note: z.string(), assignee: z.string().optional().describe("담당자를 바꿀 때만"), worker: z.string().optional().describe("assignee의 옛 이름(호환 alias)"), reopen_completed: z.boolean().optional(),
 }, W.taskStart);
 tool("task_update", "진행 중 기록: progress·decision·files·commits·note, priority(아빠 전용 값은 dad_instruction 필요), intervention(아빠 개입 값 + 요청내용). 상태는 바꾸지 않음.", {
   id: Id, progress: z.string().optional(), decision: z.string().optional(), files: z.string().optional(), commits: z.string().optional(), note: z.string().optional(),
