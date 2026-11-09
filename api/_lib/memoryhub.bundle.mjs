@@ -39579,12 +39579,12 @@ async function assertSchemaChange(dsId, ds, body) {
   if (!await isProtected(dsId) && !(ds?.parent?.database_id && await isProtected(ds.parent.database_id)))
     return;
   for (const [k, v] of Object.entries(body?.properties || {})) {
-    const cur = ds.properties[k];
+    const cur = ds.properties[k] ?? Object.values(ds.properties).find((property) => property.id === k || decodeURIComponent(property.id) === k);
     if (!cur)
       continue;
     if (v === null)
       throw new Error(`\uBCF4\uD638 DB\uC758 \uC18D\uC131 \uC0AD\uC81C \uAE08\uC9C0: ${k}`);
-    if (v.name && v.name !== k)
+    if (v.name && v.name !== cur.name)
       throw new Error(`\uBCF4\uD638 DB\uC758 \uC18D\uC131 \uC774\uB984 \uBCC0\uACBD \uAE08\uC9C0: ${k}`);
     if (v.type && v.type !== cur.type)
       throw new Error(`\uBCF4\uD638 DB\uC758 \uC18D\uC131 \uD0C0\uC785 \uBCC0\uACBD \uAE08\uC9C0: ${k}`);
@@ -40377,6 +40377,14 @@ async function schema() {
   }
   return taskSchema;
 }
+var TASK_ASSIGNEE_ID = "koig";
+function taskAssigneeProperty(properties) {
+  const official = Object.entries(properties).find(([, property2]) => property2.id === TASK_ASSIGNEE_ID);
+  const [name, property] = official ?? [PROPS.assignee, properties[PROPS.assignee]];
+  if (property?.type !== "relation")
+    throw new Error("\uC791\uC5C5 \uC6D0\uC7A5\uC758 \uB2F4\uB2F9\uC790 \uAD00\uACC4\uD615 \uC18D\uC131\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+  return { name, id: property.id };
+}
 async function readTask(id) {
   await getPolicy();
   const p = await api("GET", `/pages/${normId(id)}`);
@@ -40384,13 +40392,13 @@ async function readTask(id) {
     throw new Error("\uC791\uC5C5 \uC6D0\uC7A5\uC758 \uC791\uC5C5\uC774 \uC544\uB2D9\uB2C8\uB2E4.");
   return { page: p, props: await simplifyProps(p) };
 }
-function assigneeNames(props) {
+function assigneeNames(page, props) {
   const emps = peekPolicy()?.employees || [];
-  return (props[PROPS.assignee] || []).map((id) => emps.find((e) => e.id === normId(id))?.display ?? id);
+  return (props[taskAssigneeProperty(page.properties).name] || []).map((id) => emps.find((e) => e.id === normId(id))?.display ?? id);
 }
 function summarize(p, props, full = false) {
   const \uC791\uC5C5\uB0B4\uC6A9 = props[PROPS.content] || "";
-  const \uB2F4\uB2F9\uC790 = assigneeNames(props);
+  const \uB2F4\uB2F9\uC790 = assigneeNames(p, props);
   return {
     id: p.id,
     url: p.url,
@@ -40458,7 +40466,7 @@ async function taskSearch(a) {
     const emp = await findEmployee(who);
     if (!emp)
       throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${who}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
-    common.push({ property: PROPS.assignee, relation: { contains: emp.id } });
+    common.push({ property: taskAssigneeProperty(await schema()).id, relation: { contains: emp.id } });
   }
   const branches = [];
   const st = a.status ? Array.isArray(a.status) ? a.status : [a.status] : null;
@@ -40540,13 +40548,10 @@ async function taskCreate(a) {
   if (!emp)
     throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${assigneeName}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC815\uD655\uD55C \uC774\uB984: ${p.employees.map((e) => e.display).join(", ")}`);
   const s = await schema();
-  const vals = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.workday]: await currentWorkday(), [PROPS.project]: [proj.id] };
+  const assignee = taskAssigneeProperty(s);
+  const vals = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.project]: [proj.id] };
   if (priority)
     vals[PROPS.priority] = priority;
-  if (s[PROPS.assignee])
-    vals[PROPS.assignee] = [emp.id];
-  else
-    notes.push(`'${PROPS.assignee}' relation \uC18D\uC131\uC774 \uC5C6\uC5B4 \uB2F4\uB2F9\uC790\uB97C relation\uC73C\uB85C \uB0A8\uAE30\uC9C0 \uBABB\uD568`);
   if (!caller)
     notes.push("\uD638\uCD9C\uC790\uB97C \uD655\uC778\uD560 \uC218 \uC5C6\uC5B4 \uC785\uB825\uC790\uB97C \uBE44\uC6CC \uB460(\uCD94\uC815\uD558\uC9C0 \uC54A\uC74C)");
   else if (p.inputterOptions.includes(caller))
@@ -40560,7 +40565,10 @@ async function taskCreate(a) {
       notes.push(`\uC758\uB8B0\uC790 \uC120\uD0DD\uC9C0\uC5D0 '${a.requester}'\uAC00 \uC5C6\uC5B4 \uBE44\uC6CC \uB460`);
   }
   Object.assign(vals, a.extra || {});
+  delete vals[PROPS.workday];
+  delete vals[assignee.name];
   const props = buildProps(s, vals);
+  props[assignee.id] = { relation: [{ id: emp.id }] };
   props[PROPS.content] = { rich_text: rt(`${stamp()} ${a.content}${a.dad_instruction ? `
 (\uC544\uBE60 \uC9C0\uC2DC: ${a.dad_instruction})` : ""}`) };
   const page = await api("POST", "/pages", { parent: { type: "data_source_id", data_source_id: IDS.taskDs }, properties: props });
@@ -40568,7 +40576,7 @@ async function taskCreate(a) {
   audit({ tool: "task_create", id: page.id, title, caller, distinct_from: a.distinct_from, dad_instruction: a.dad_instruction });
   const re = await readTask(page.id);
   const linked = (re.props[PROPS.project] || []).map(normId).includes(proj.id);
-  const assigned = !s[PROPS.assignee] || (re.props[PROPS.assignee] || []).map(normId).includes(emp.id);
+  const assigned = (re.props[taskAssigneeProperty(re.page.properties).name] || []).map(normId).includes(emp.id);
   return {
     created: true,
     project_linked: linked,
@@ -40592,10 +40600,7 @@ async function taskStart(a) {
     const emp = await findEmployee(who);
     if (!emp)
       throw new Error(`\uC9C1\uC6D0\xB7\uC5D0\uC774\uC804\uD2B8 DB\uC5D0\uC11C '${who}'\uB97C \uC815\uD655\uD788 \uD558\uB098\uB85C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`);
-    if (page.properties[PROPS.assignee])
-      body.properties[PROPS.assignee] = { relation: [{ id: emp.id }] };
-    else
-      throw new Error(`'${PROPS.assignee}' relation \uC18D\uC131\uC774 \uC5C6\uC5B4 \uB2F4\uB2F9\uC790\uB97C \uBC14\uAFC0 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+    body.properties[taskAssigneeProperty(page.properties).id] = { relation: [{ id: emp.id }] };
   }
   await api("PATCH", `/pages/${page.id}`, body);
   audit({ tool: "task_start", id: page.id, from: props[PROPS.status], caller: currentCaller() });
@@ -40845,7 +40850,7 @@ async function employeeUpdate(a) {
 }
 
 // dist/tools.js
-function buildServer() {
+function buildServer(localSchemaMigration) {
   const server = new McpServer({ name: "woos-memoryhub", version: "1.1.0" }, {
     instructions: [
       "WOO'S \uBA54\uBAA8\uB9AC\uD5C8\uBE0C MCP: \uC774 \uD1B5\uD569\uC774 \uC811\uADFC \uAD8C\uD55C\uC744 \uAC00\uC9C4 Notion \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4 \uC804\uCCB4\uB97C \uC870\uD68C\xB7\uAC80\uC0C9\xB7\uC0DD\uC131\xB7\uC218\uC815\xB7\uC774\uB3D9\xB7Relation\xB7\uC2A4\uD0A4\uB9C8\xB7\uD734\uC9C0\uD1B5 \uCC98\uB9AC\uD55C\uB2E4.",
@@ -40934,6 +40939,13 @@ function buildServer() {
     remove: external_exports.array(external_exports.string()).optional(),
     change_options: external_exports.record(external_exports.string(), external_exports.array(external_exports.string())).optional()
   }, updateSchema);
+  if (localSchemaMigration && process.env.WOOS_TASK_ASSIGNEE_MIGRATION_BACKUP) {
+    tool("task_assignee_schema_migrate", "\uC2B9\uC778\uB41C \uACF5\uC2DD \uC791\uC5C5 \uC6D0\uC7A5 \uB2F4\uB2F9\uC790 \uC774\uB984 \uBCC0\uACBD \uB610\uB294 \uC608\uC804 \uC791\uC5C5\uC790 \uC18D\uC131 \uC0AD\uC81C. \uB85C\uCEEC \uBC31\uC5C5\uACFC \uD604\uC7AC \uB370\uC774\uD130\uAC00 \uC815\uD655\uD788 \uAC19\uC544\uC57C \uC2E4\uD589\uD569\uB2C8\uB2E4.", {
+      action: external_exports.enum(["rename", "remove_legacy"]),
+      backup_sha256: external_exports.string().regex(/^[0-9a-fA-F]{64}$/),
+      dad_instruction: external_exports.string()
+    }, localSchemaMigration);
+  }
   tool("move", "\uD398\uC774\uC9C0\uB97C \uB2E4\uB978 \uD398\uC774\uC9C0/DB \uC544\uB798\uB85C, DB(\uB610\uB294 \uADF8 \uB370\uC774\uD130\uC18C\uC2A4)\uB97C \uB2E4\uB978 \uD398\uC774\uC9C0 \uC544\uB798\uB85C \uC774\uB3D9 \uD6C4 \uBD80\uBAA8 \uC7AC\uC870\uD68C \uAC80\uC99D. \uBCF4\uD638 \uAC1D\uCCB4 \uC774\uB3D9\uC740 dad_instruction \uD544\uC218.", { id: Id, new_parent_id: Id, dad_instruction: DadInstruction }, move);
   tool("trash_prepare", "\uD734\uC9C0\uD1B5 1\uB2E8\uACC4: \uB300\uC0C1(\uCD5C\uB300 20\uAC74)\uC758 \uD604\uC7AC \uC81C\uBAA9\xB7\uC885\uB958\xB7\uBD80\uBAA8\xB7\uD3EC\uD568 \uD56D\uBAA9 \uC218\uB97C \uC7AC\uC870\uD68C\uD558\uACE0 \uC2B9\uC778\uD1A0\uD070 \uBC1C\uAE09. \uBCF4\uD638 \uAC1D\uCCB4\uB294 \uAC70\uBD80. \uC2E4\uD589\uD558\uC9C0 \uC54A\uC74C.", { ids: external_exports.array(external_exports.string()) }, trashPrepare);
   tool("trash_execute", "\uD734\uC9C0\uD1B5 2\uB2E8\uACC4: \uC2B9\uC778\uD1A0\uD070 + \uC2B9\uC778 \uADFC\uAC70\uB85C \uC2E4\uC81C \uD734\uC9C0\uD1B5 \uCC98\uB9AC \u2192 \uC7AC\uC870\uD68C\uB85C in_trash \uAC80\uC99D. \uC2E4\uD589 \uC9C1\uC804 \uC804\uCCB4 \uB300\uC0C1\uC744 \uB2E4\uC2DC \uD655\uC778\uD574 \uD558\uB098\uB77C\uB3C4 \uBC14\uB00C\uC5C8\uAC70\uB098 \uC774\uBBF8 \uD734\uC9C0\uD1B5\uC774\uBA74(\uD1A0\uD070 \uC7AC\uC0AC\uC6A9) \uC544\uBB34\uAC83\uB3C4 \uD558\uC9C0 \uC54A\uB294\uB2E4. \uAE30\uC874 \uB370\uC774\uD130\uB294 approved_by='\uC544\uBE60' + \uC544\uBE60\uC758 \uC2E4\uC81C \uC0AD\uC81C \uC9C0\uC2DC \uBB38\uAD6C \uD544\uC218. test_object\uB85C \uB9CC\uB4E0 \uAC1D\uCCB4\uB9CC approval='\uD14C\uC2A4\uD2B8 \uAC1D\uCCB4 \uC815\uB9AC'\uB85C \uCC98\uB9AC \uAC00\uB2A5.", {

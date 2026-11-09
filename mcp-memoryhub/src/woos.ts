@@ -23,6 +23,15 @@ async function schema() {
   return taskSchema;
 }
 
+// 공식 원장의 관계형 속성 ID는 이름을 변경해도 유지된다.
+const TASK_ASSIGNEE_ID = "koig";
+function taskAssigneeProperty(properties: Record<string, any>) {
+  const official = Object.entries(properties).find(([, property]) => property.id === TASK_ASSIGNEE_ID);
+  const [name, property] = official ?? [PROPS.assignee, properties[PROPS.assignee]];
+  if (property?.type !== "relation") throw new Error("작업 원장의 담당자 관계형 속성을 찾지 못했습니다.");
+  return { name, id: property.id };
+}
+
 async function readTask(id: string) {
   await getPolicy(); // summarize가 담당자 relation id → 이름 변환에 쓰는 직원 목록
   const p = await api("GET", `/pages/${normId(id)}`);
@@ -31,14 +40,14 @@ async function readTask(id: string) {
 }
 
 /** 담당자 relation(직원·에이전트 id 배열) → 표시 이름 배열. 정책 미로드/미등록 id는 id 그대로 */
-function assigneeNames(props: any): string[] {
+function assigneeNames(page: any, props: any): string[] {
   const emps = peekPolicy()?.employees || [];
-  return ((props[PROPS.assignee] || []) as string[]).map((id) => emps.find((e) => e.id === normId(id))?.display ?? id);
+  return ((props[taskAssigneeProperty(page.properties).name] || []) as string[]).map((id) => emps.find((e) => e.id === normId(id))?.display ?? id);
 }
 
 function summarize(p: any, props: any, full = false): any {
   const 작업내용: string = props[PROPS.content] || "";
-  const 담당자 = assigneeNames(props);
+  const 담당자 = assigneeNames(p, props);
   return {
     id: p.id, url: p.url, 작업명: props[PROPS.title], 상태: props[PROPS.status], 우선순위: props[PROPS.priority],
     담당자, 입력자: props[PROPS.inputter],
@@ -103,7 +112,7 @@ export async function taskSearch(a: { query?: string; status?: string | string[]
     // 외부 인자는 사람·AI 이름 그대로, 내부에서 직원·에이전트 relation id로 바꿔 「담당자」 relation으로 검색
     const emp = await findEmployee(who);
     if (!emp) throw new Error(`직원·에이전트 DB에서 '${who}'를 정확히 하나로 찾지 못했습니다. 정확한 이름: ${(await getPolicy()).employees.map((e) => e.display).join(", ")}`);
-    common.push({ property: PROPS.assignee, relation: { contains: emp.id } });
+    common.push({ property: taskAssigneeProperty(await schema()).id, relation: { contains: emp.id } });
   }
   const branches: any[][] = [];
   const st = a.status ? (Array.isArray(a.status) ? a.status : [a.status]) : null;
@@ -194,22 +203,25 @@ export async function taskCreate(a: {
   const emp = await findEmployee(assigneeName);
   if (!emp) throw new Error(`직원·에이전트 DB에서 '${assigneeName}'를 정확히 하나로 찾지 못했습니다. 정확한 이름: ${p.employees.map((e) => e.display).join(", ")}`);
   const s = await schema();
-  const vals: any = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.workday]: await currentWorkday(), [PROPS.project]: [proj.id] };
+  const assignee = taskAssigneeProperty(s);
+  const vals: any = { [PROPS.title]: title, [PROPS.status]: status, [PROPS.projectName]: a.project, [PROPS.project]: [proj.id] };
   if (priority) vals[PROPS.priority] = priority;
-  if (s[PROPS.assignee]) vals[PROPS.assignee] = [emp.id]; else notes.push(`'${PROPS.assignee}' relation 속성이 없어 담당자를 relation으로 남기지 못함`);
   if (!caller) notes.push("호출자를 확인할 수 없어 입력자를 비워 둠(추정하지 않음)");
   else if (p.inputterOptions.includes(caller)) vals[PROPS.inputter] = caller;
   else notes.push(`입력자(select) 선택지에 '${caller}'가 없어 비워 둠 — 작업내용 기록 머리표에 호출자 표시`);
   if (a.requester) { if (p.requesterOptions.includes(a.requester)) vals[PROPS.requester] = a.requester; else notes.push(`의뢰자 선택지에 '${a.requester}'가 없어 비워 둠`); }
   Object.assign(vals, a.extra || {});
+  delete vals[PROPS.workday];
+  delete vals[assignee.name];
   const props = buildProps(s, vals);
+  props[assignee.id] = { relation: [{ id: emp.id }] };
   props[PROPS.content] = { rich_text: rt(`${stamp()} ${a.content}${a.dad_instruction ? `\n(아빠 지시: ${a.dad_instruction})` : ""}`) };
   const page = await api("POST", "/pages", { parent: { type: "data_source_id", data_source_id: IDS.taskDs }, properties: props });
   markCreated(page.id, "page", title, !!a.test_object);
   audit({ tool: "task_create", id: page.id, title, caller, distinct_from: a.distinct_from, dad_instruction: a.dad_instruction });
   const re = await readTask(page.id);
   const linked = (re.props[PROPS.project] || []).map(normId).includes(proj.id);
-  const assigned = !s[PROPS.assignee] || (re.props[PROPS.assignee] || []).map(normId).includes(emp.id);
+  const assigned = (re.props[taskAssigneeProperty(re.page.properties).name] || []).map(normId).includes(emp.id);
   return {
     created: true, project_linked: linked, 담당자: emp.name, inputter: vals[PROPS.inputter] ?? null, notes,
     verified: re.props[PROPS.title] === title && re.props[PROPS.status] === status && linked && assigned, task: summarize(re.page, re.props),
@@ -227,8 +239,7 @@ export async function taskStart(a: { id: string; note: string; assignee?: string
   if (who) {
     const emp = await findEmployee(who);
     if (!emp) throw new Error(`직원·에이전트 DB에서 '${who}'를 정확히 하나로 찾지 못했습니다.`);
-    if (page.properties[PROPS.assignee]) body.properties[PROPS.assignee] = { relation: [{ id: emp.id }] };
-    else throw new Error(`'${PROPS.assignee}' relation 속성이 없어 담당자를 바꿀 수 없습니다.`);
+    body.properties[taskAssigneeProperty(page.properties).id] = { relation: [{ id: emp.id }] };
   }
   await api("PATCH", `/pages/${page.id}`, body);
   audit({ tool: "task_start", id: page.id, from: props[PROPS.status], caller: currentCaller() });

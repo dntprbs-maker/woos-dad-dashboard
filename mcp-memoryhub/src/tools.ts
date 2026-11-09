@@ -6,7 +6,7 @@ import * as G from "./generic.js";
 import * as W from "./woos.js";
 import { policySummary } from "./policy.js";
 
-export function buildServer() {
+export function buildServer(localSchemaMigration?: typeof import('./task-assignee-migration.js').migrateTaskAssignee) {
 const server = new McpServer(
   { name: "woos-memoryhub", version: "1.1.0" },
   {
@@ -67,6 +67,12 @@ tool("create_database", "페이지 아래 DB 생성. properties 예: {\"이름\"
 tool("update_schema", "DB/데이터소스 스키마 수정: add(속성 추가), rename({옛:새}), remove(속성 삭제), change_options({속성:[선택지..]}), title. 보호 DB는 추가만 허용(삭제·이름변경·선택지 삭제 금지).", {
   id: Id, title: z.string().optional(), add: Any.optional(), rename: z.record(z.string(), z.string()).optional(), remove: z.array(z.string()).optional(), change_options: z.record(z.string(), z.array(z.string())).optional(),
 }, G.updateSchema);
+if (localSchemaMigration && process.env.WOOS_TASK_ASSIGNEE_MIGRATION_BACKUP) {
+  tool("task_assignee_schema_migrate", "승인된 공식 작업 원장 담당자 이름 변경 또는 예전 작업자 속성 삭제. 로컬 백업과 현재 데이터가 정확히 같아야 실행합니다.", {
+    action: z.enum(["rename", "remove_legacy"]), backup_sha256: z.string().regex(/^[0-9a-fA-F]{64}$/),
+    dad_instruction: z.string(),
+  }, localSchemaMigration);
+}
 tool("move", "페이지를 다른 페이지/DB 아래로, DB(또는 그 데이터소스)를 다른 페이지 아래로 이동 후 부모 재조회 검증. 보호 객체 이동은 dad_instruction 필수.", { id: Id, new_parent_id: Id, dad_instruction: DadInstruction }, G.move);
 
 // ═════════ 범용: 휴지통·검증 ═════════

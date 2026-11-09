@@ -38,10 +38,10 @@ export async function assertMoveAllowed(id: string, dadInstruction?: string) {
 export async function assertSchemaChange(dsId: string, ds: any, body: any) {
   if (!(await isProtected(dsId)) && !(ds?.parent?.database_id && (await isProtected(ds.parent.database_id)))) return;
   for (const [k, v] of Object.entries<any>(body?.properties || {})) {
-    const cur = ds.properties[k];
+    const cur = ds.properties[k] ?? Object.values<any>(ds.properties).find((property) => property.id === k || decodeURIComponent(property.id) === k);
     if (!cur) continue; // 새 속성 추가는 허용
     if (v === null) throw new Error(`보호 DB의 속성 삭제 금지: ${k}`);
-    if (v.name && v.name !== k) throw new Error(`보호 DB의 속성 이름 변경 금지: ${k}`);
+    if (v.name && v.name !== cur.name) throw new Error(`보호 DB의 속성 이름 변경 금지: ${k}`);
     if (v.type && v.type !== cur.type) throw new Error(`보호 DB의 속성 타입 변경 금지: ${k}`);
     const t = cur.type;
     if (["select", "multi_select", "status"].includes(t) && v[t]?.options) {
