@@ -1,8 +1,5 @@
 {
   "functions": {
-    "api/tasks.js": {
-      "maxDuration": 10
-    },
     "api/memoryhub.js": {
       "maxDuration": 60
     },
@@ -11,6 +8,10 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/",
+      "destination": "/task-ledger.html"
+    },
     {
       "source": "/task-ledger",
       "destination": "/task-ledger.html"
