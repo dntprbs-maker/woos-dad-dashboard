@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>작업 원장 모아보기</title>
+  <style>
+    :root { font: 16px system-ui, sans-serif; color: #141923; background: #f1f4f9; --blue: #0958ed; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #0958ed; outline-offset: 3px; }
+    .app { max-width: 740px; height: 100dvh; margin: auto; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+    .top { background: white; padding: 24px 16px 0; border-bottom: 1px solid #d5deea; }
+    h1 { margin: 0 0 10px; font-size: clamp(1.45rem, 5.7vw, 2rem); }
+    .preview-label { margin: 0 0 12px; font-size: .8rem; color: #536178; }
+    .tabs { display: grid; grid-template-columns: 1.45fr 1fr 1fr; }
+    .tabs button { color: #46526a; background: white; border: 0; border-bottom: 3px solid transparent; padding: 13px 2px; white-space: nowrap; font-weight: 700; font-size: clamp(.75rem, 3.6vw, 1rem); }
+    .tabs button[aria-selected=true] { color: var(--blue); border-color: var(--blue); }
+    .list { overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
+    .card { width: 100%; text-align: left; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid #a2b1c9; border-radius: 13px; background: white; padding: 15px; margin-bottom: 12px; color: inherit; }
+    .badge { display: inline-block; color: #0846b6; background: #e3edff; border-radius: 8px; padding: 3px 9px; font-weight: 700; font-size: .84rem; }
+    .name { display: block; margin-top: 8px; font-size: 1.05rem; overflow-wrap: anywhere; }
+    .summary { display: block; color: #536178; margin-top: 5px; font-size: .9rem; }
+    .chevron { color: #536178; font-size: 1.65rem; }
+    dialog { width: min(calc(100% - 20px), 650px); height: 88dvh; max-height: none; padding: 0; border: 0; border-radius: 17px; box-shadow: 0 12px 35px #15213345; color: inherit; }
+    dialog::backdrop { background: #1e293b56; }
+    .popup { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+    .popup-top { position: relative; padding: 17px 58px 14px 17px; border-bottom: 1px solid #dce4ee; }
+    h2 { font-size: 1.18rem; margin: 8px 0 0; overflow-wrap: anywhere; }
+    .close { position: absolute; inset: 8px 8px auto auto; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: #46526a; font-size: 1.8rem; }
+    .popup-body { overflow-y: auto; overscroll-behavior: contain; padding: 14px 17px; }
+    .section { border: 1px solid #d5deea; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+    .section h3 { margin: 0; background: #edf1f7; padding: 9px 12px; font-size: .95rem; }
+    .section p { margin: 0; padding: 12px; line-height: 1.6; }
+    fieldset { margin: 0 0 14px; padding: 0; border: 0; min-width: 0; }
+    legend { margin-bottom: 6px; font-weight: 700; }
+    label { display: flex; align-items: center; gap: 9px; border: 1px solid #b5c3d8; padding: 12px; border-radius: 9px; margin-top: 7px; }
+    input { accent-color: var(--blue); width: 19px; height: 19px; }
+    .popup-bottom { border-top: 1px solid #dce4ee; padding: 12px 17px; background: white; }
+    .save { width: 100%; padding: 11px; border: 0; border-radius: 10px; background: var(--blue); color: white; font-weight: 750; }
+    .save:disabled { background: #d9e5f8; color: #415577; cursor: default; }
+    .login { max-width: 420px; margin: 12px auto; padding: 18px; border-radius: 12px; background: white; }
+    .login input { width: 100%; height: auto; padding: 10px; margin: 10px 0; }
+    .summary, .section p { white-space: pre-wrap; overflow-wrap: anywhere; }
+    #feedback { margin: 0 0 8px; font-size: .85rem; color: #25466f; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>작업 원장 모아보기</h1>
+      <p class="preview-label">실시간 작업 원장</p>
+      <div class="tabs" role="tablist" aria-label="작업 보기">
+        <button id="decision" role="tab" aria-controls="list" aria-selected="true">사장님 결정 필요</button>
+        <button id="progress" role="tab" aria-controls="list" aria-selected="false" tabindex="-1">진행중</button>
+        <button id="incomplete" role="tab" aria-controls="list" aria-selected="false" tabindex="-1">완료 제외</button>
+      </div>
+    </header>
+    <section id="list" class="list" role="tabpanel" aria-labelledby="decision" tabindex="0"></section>
+  </main>
+  <dialog id="detail" aria-labelledby="task-title">
+    <form class="popup">
+      <header class="popup-top">
+        <span id="project" class="badge"></span>
+        <h2 id="task-title"></h2>
+        <button type="button" class="close" aria-label="상세 닫기" autofocus>×</button>
+      </header>
+      <div class="popup-body" tabindex="0" aria-label="작업 본문">
+        <section class="section" id="request"><h3>사장님이 하실 일</h3><p></p></section>
+        <fieldset id="choices"><legend>선택지</legend></fieldset>
+        <section class="section" id="description"><h3>작업 상세</h3><div></div></section>
+      </div>
+      <footer class="popup-bottom" id="actions">
+        <p id="feedback" role="status" hidden></p>
+        <button class="save" disabled>결정 저장</button>
+      </footer>
+    </form>
+  </dialog>
+  <script>
+    const list = document.querySelector('#list');
+    const tabs = [...document.querySelectorAll('[role=tab]')];
+    const dialog = document.querySelector('#detail');
+    const body = dialog.querySelector('.popup-body');
+    const choices = dialog.querySelector('#choices');
+    const save = dialog.querySelector('.save');
+    const feedback = dialog.querySelector('#feedback');
+    const offsets = new Map();
+    let tasks = [];
+    let listMessage = "작업 원장을 불러오는 중입니다.";
+    let active = 'decision';
+    let current;
+    let closing = false;
+    let opener;
+
+    function element(tag, className, value) {
+      const el = document.createElement(tag);
+      el.className = className;
+      el.textContent = value;
+      return el;
+    }
+
+    function renderList() {
+      const visible = tasks.filter(task => {
+        if (active === 'decision') return task.pending;
+        if (active === 'progress') return task.state === '진행중';
+        return task.state !== '완료';
+      });
+      list.setAttribute('aria-labelledby', active);
+      if (listMessage || !visible.length) {
+        if (listMessage === '로그인이 필요합니다.') showLogin();
+        else list.replaceChildren(element('p', '', listMessage || '이 탭에 표시할 작업이 없습니다.'));
+        return;
+      }
+      list.replaceChildren(...visible.map(task => {
+        const card = element('button', 'card', '');
+        const content = element('span', '', '');
+        content.append(element('span', 'badge', task.project), element('strong', 'name', task.title),
+          element('span', 'summary', task.ask || task.state || '상태 미지정'));
+        const arrow = element('span', 'chevron', '›');
+        arrow.setAttribute('aria-hidden', 'true');
+        card.append(content, arrow);
+        card.addEventListener('click', () => {
+          opener = card;
+          history.pushState({ task: task.id }, '');
+          openTask(task);
+        });
+        return card;
+      }));
+    }
+
+    function selectTab(tab) {
+      offsets.set(active, list.scrollTop);
+      active = tab.id;
+      tabs.forEach(item => {
+        item.setAttribute('aria-selected', String(item === tab));
+        item.tabIndex = item === tab ? 0 : -1;
+      });
+      renderList();
+      list.scrollTop = offsets.get(active) ?? 0;
+    }
+
+    async function api(path, init) {
+      const response = await fetch(path, { cache: 'no-store', ...init });
+      const value = await response.json();
+      if (!response.ok) throw Object.assign(new Error(value.error || '요청을 처리하지 못했습니다.'), { status: response.status });
+      return value;
+    }
+
+    function showLogin() {
+      const form = element('form', 'login', '');
+      const input = document.createElement('input');
+      input.type = 'password';
+      input.autocomplete = 'current-password';
+      input.required = true;
+      input.setAttribute('aria-label', '대시보드 비밀번호');
+      const submit = element('button', 'save', '로그인');
+      const message = element('p', '', '');
+      message.setAttribute('role', 'status');
+      form.append(element('strong', '', '기존 대시보드 비밀번호로 로그인'), input, submit, message);
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        submit.disabled = true;
+        try {
+          await api('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: input.value }) });
+          input.value = '';
+          await loadList();
+        } catch (error) {
+          message.textContent = error.message;
+        } finally {
+          submit.disabled = false;
+        }
+      });
+      list.replaceChildren(form);
+    }
+
+    async function loadList() {
+      listMessage = '작업 원장을 불러오는 중입니다.';
+      renderList();
+      try {
+        tasks = (await api('/api/task-ledger')).tasks;
+        listMessage = '';
+        renderList();
+      } catch (error) {
+        tasks = [];
+        listMessage = error.status === 401 ? '로그인이 필요합니다.' : error.message;
+        renderList();
+      }
+    }
+
+    async function openTask(task) {
+      const loading = { ...task, details: '작업 상세를 불러오는 중입니다.' };
+      showTask(loading);
+      try {
+        const fresh = await api('/api/task-ledger?id=' + encodeURIComponent(task.id));
+        if (dialog.open && current === loading) showTask(fresh);
+      } catch (error) {
+        if (dialog.open && current === loading) showTask({ ...task, details: error.message });
+      }
+    }
+
+    function showTask(task) {
+      current = task;
+      dialog.querySelector('#project').textContent = task.project;
+      dialog.querySelector('#task-title').textContent = task.title;
+      dialog.querySelector('#request').hidden = !task.ask;
+      dialog.querySelector('#request p').textContent = task.ask ?? '';
+      choices.hidden = !task.choices?.length;
+      dialog.querySelector('#actions').hidden = !task.choices?.length;
+      save.hidden = false;
+      choices.replaceChildren(element('legend', '', '선택지'));
+      task.choices?.forEach((choice, index) => {
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'choice';
+        input.value = String(index);
+        input.checked = false;
+        const label = element('label', '', '');
+        label.append(input, document.createTextNode((index + 1) + '번  ' + choice));
+        choices.append(label);
+      });
+      dialog.querySelector('#description div').replaceChildren(
+        ...[
+          '상태 · ' + (task.state || '미지정'),
+          task.pending && task.revision && !task.choices?.length ? '번호 선택지가 명확하지 않습니다. 원장에 선택지를 적으면 여기에서 결정할 수 있습니다.' : '',
+          task.details || '상세 내용이 없습니다.',
+          task.decision ? '원장 결정사항\n' + task.decision.replace(/\[웹 결정 [a-f0-9]+\/\d+\]/g, '').trim() : '',
+        ].filter(Boolean).map(line => element('p', '', line)));
+      save.disabled = true;
+      feedback.hidden = true;
+      if (!dialog.open) dialog.showModal();
+      body.scrollTop = 0;
+    }
+
+    function closeTask() {
+      if (dialog.open && !closing) {
+        closing = true;
+        history.back();
+      }
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => selectTab(tab));
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : 2)) % tabs.length];
+        selectTab(next);
+        next.focus();
+      });
+    });
+    dialog.querySelector('.close').addEventListener('click', closeTask);
+    dialog.addEventListener('cancel', event => { event.preventDefault(); closeTask(); });
+    choices.addEventListener('change', () => { save.disabled = false; feedback.hidden = true; });
+    let saving = false;
+    let refreshAfterClose = false;
+    dialog.querySelector('form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const picked = choices.querySelector('input:checked');
+      if (!picked || save.disabled || saving) return;
+      const task = current;
+      saving = true;
+      save.disabled = true;
+      choices.disabled = true;
+      feedback.textContent = '원장에 저장하는 중입니다.';
+      feedback.hidden = false;
+      try {
+        await api('/api/task-ledger?id=' + encodeURIComponent(task.id), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ choice: Number(picked.value) + 1, revision: task.revision }),
+        });
+        tasks = tasks.map(t => t.id === task.id ? { ...t, pending: false, ask: '' } : t);
+        if (dialog.open && current === task) {
+          refreshAfterClose = true;
+          feedback.textContent = (Number(picked.value) + 1) + '번을 원장에 저장했습니다.';
+          save.hidden = true;
+        } else {
+          refreshList();
+        }
+      } catch (error) {
+        if (dialog.open && current === task) {
+          feedback.textContent = error.message;
+          save.disabled = false;
+        }
+      } finally {
+        saving = false;
+        choices.disabled = false;
+      }
+    });
+    function refreshList() {
+      const top = list.scrollTop;
+      renderList();
+      list.scrollTop = top;
+    }
+    window.addEventListener('popstate', event => {
+      closing = false;
+      const task = tasks.find(t => t.id === event.state?.task);
+      if (task) {
+        openTask(task);
+      } else if (dialog.open) {
+        dialog.close();
+        if (refreshAfterClose) {
+          refreshAfterClose = false;
+          refreshList();
+          list.focus({ preventScroll: true });
+        } else opener?.focus({ preventScroll: true });
+      }
+    });
+    if (history.state?.task !== undefined) history.replaceState(null, '');
+    loadList();
+  </script>
+</body>
+</html>

@@ -5,9 +5,16 @@
     },
     "api/memoryhub.js": {
       "maxDuration": 60
+    },
+    "api/task-ledger.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
+    {
+      "source": "/task-ledger",
+      "destination": "/task-ledger.html"
+    },
     {
       "source": "/api/memoryhub/:path*",
       "destination": "/api/memoryhub?mhkey=:path*"
